@@ -1,0 +1,380 @@
+.dashboard {
+  padding: 24px 32px 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.dashboard-date {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.today-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+}
+
+.today-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+}
+
+.today-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.today-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.today-value.good { color: #16a34a; }
+.today-value.bad { color: #dc2626; }
+
+.module-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 20px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card-wide {
+  grid-column: 1 / -1;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.module-note {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+.primary-btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+.icon-btn {
+  font: inherit;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--code-bg);
+}
+
+/* Bible module */
+.bible-daynav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bible-day-label {
+  text-align: center;
+  flex: 1;
+}
+
+.bible-day-number {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.bible-day-ref {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.chapter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.chapter-list label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.chapter-list label.checked {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Workout module */
+.exercise-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exercise-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.exercise-name {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.exercise-target {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.exercise-last {
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.set-inputs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.set-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.set-input input {
+  width: 52px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* Budget module */
+.tx-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tx-form input[type="text"] {
+  flex: 2;
+  min-width: 160px;
+}
+
+.tx-form input[type="number"] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.tx-form select {
+  flex: 1;
+  min-width: 140px;
+}
+
+.tx-form input,
+.tx-form select {
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 14px;
+}
+
+.category-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-row-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.category-row-top .over-budget {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.budget-input {
+  width: 60px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.bar-fill.over {
+  background: #dc2626;
+}
+
+.tx-list {
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.tx-list summary {
+  cursor: pointer;
+  color: var(--text);
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tx-date {
+  opacity: 0.6;
+  width: 40px;
+}
+
+.tx-desc {
+  flex: 1;
+}
+
+.tx-amount {
+  font-weight: 600;
+  width: 70px;
+  text-align: right;
+}
+
+.tx-row select {
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+@media (max-width: 800px) {
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard {
+    padding: 16px;
+  }
+}

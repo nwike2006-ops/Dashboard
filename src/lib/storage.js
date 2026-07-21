@@ -12,6 +12,23 @@ export function daysBetween(aStr, bStr) {
   return Math.round((b - a) / 86400000);
 }
 
+function formatDate(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return formatDate(d);
+}
+
+export function addMonths(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + n);
+  return formatDate(d);
+}
+
 function read(key, fallback) {
   try {
     const raw = localStorage.getItem(key);

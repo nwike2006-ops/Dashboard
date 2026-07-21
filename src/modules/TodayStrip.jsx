@@ -1,12 +1,13 @@
 import { expandDayReading } from '../data/biblePlan';
 import { getSession, splitDayForWeekday } from '../data/workoutPlan';
+import { oilStatus } from './CarModule';
 import { todayStr } from '../lib/storage';
 
 function currentMonthKey(dateStr) {
   return dateStr.slice(0, 7);
 }
 
-export default function TodayStrip({ bibleState, workoutState, budgetState }) {
+export default function TodayStrip({ bibleState, workoutState, budgetState, carState }) {
   const today = todayStr();
 
   const chapters = expandDayReading(bibleState.currentDay);
@@ -22,6 +23,8 @@ export default function TodayStrip({ bibleState, workoutState, budgetState }) {
   const totalBudgeted = budgetState.categories.reduce((sum, c) => sum + Number(c.monthlyBudget || 0), 0);
   const totalSpent = monthTx.reduce((sum, t) => sum + Number(t.amount), 0);
   const remaining = totalBudgeted - totalSpent;
+
+  const car = carState.oilChanges.length > 0 ? oilStatus(carState) : null;
 
   return (
     <div className="today-strip">
@@ -39,6 +42,14 @@ export default function TodayStrip({ bibleState, workoutState, budgetState }) {
           {totalBudgeted === 0 ? 'Not set up' : `$${remaining.toFixed(0)}`}
         </span>
       </div>
+      {car && (
+        <div className="today-item">
+          <span className="today-label">Car</span>
+          <span className={`today-value ${car.level === 'ok' ? 'good' : car.level === 'overdue' ? 'bad' : ''}`}>
+            {car.level === 'ok' ? 'On track' : car.level === 'due-soon' ? 'Due soon' : 'Overdue'}
+          </span>
+        </div>
+      )}
       {bibleState.streak > 0 && (
         <div className="today-item">
           <span className="today-label">Reading streak</span>

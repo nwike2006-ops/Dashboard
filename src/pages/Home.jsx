@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 import { expandDayReading, getRawDayLabel } from '../data/biblePlan';
 import { splitDayForWeekday } from '../data/workoutPlan';
 import { oilStatus } from '../modules/CarModule';
@@ -8,11 +9,14 @@ function currentMonthKey(dateStr) {
   return dateStr.slice(0, 7);
 }
 
-function Tile({ to, label, value, valueClass, sub }) {
+function Tile({ to, accent, label, value, valueClass, sub }) {
   return (
-    <Link to={to} className="tile">
+    <Link to={to} className={`tile tile-${accent}`}>
       <div className="tile-top">
-        <span className="tile-label">{label}</span>
+        <span className="tile-label">
+          <span className="tile-dot" aria-hidden="true" />
+          {label}
+        </span>
         <span className="tile-chevron">›</span>
       </div>
       <div className={`tile-value ${valueClass || ''}`}>{value}</div>
@@ -40,22 +44,19 @@ export default function Home({ bibleState, carState, budgetState }) {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Dashboard</h1>
-        <span className="dashboard-date">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </span>
-      </header>
+      <AppHeader />
 
       <div className="tile-grid">
         <Tile
           to="/workout"
+          accent="workout"
           label="Workout"
           value={dayKey || 'Rest day'}
           sub={dayKey ? "Today's session" : 'Nothing scheduled today'}
         />
         <Tile
           to="/bible"
+          accent="bible"
           label="Bible Reading"
           value={getRawDayLabel(bibleState.currentDay)}
           valueClass={bibleDone ? 'good' : ''}
@@ -63,6 +64,7 @@ export default function Home({ bibleState, carState, budgetState }) {
         />
         <Tile
           to="/car"
+          accent="car"
           label="Car Maintenance"
           value={car ? car.text : (carState.fillups.length > 0 ? `${carState.fillups[0].mileage.toLocaleString()} mi` : 'No data yet')}
           valueClass={car ? (car.level === 'ok' ? 'good' : car.level === 'overdue' ? 'bad' : '') : ''}
@@ -70,6 +72,7 @@ export default function Home({ bibleState, carState, budgetState }) {
         />
         <Tile
           to="/budget"
+          accent="budget"
           label="Budget"
           value={totalBudgeted === 0 ? 'Not set up' : `$${remaining.toFixed(0)} left`}
           valueClass={totalBudgeted === 0 ? '' : remaining < 0 ? 'bad' : 'good'}

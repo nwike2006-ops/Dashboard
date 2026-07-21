@@ -6,6 +6,10 @@ export function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+export function todayLabel() {
+  return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 export function daysBetween(aStr, bStr) {
   const a = new Date(aStr + 'T00:00:00');
   const b = new Date(bStr + 'T00:00:00');

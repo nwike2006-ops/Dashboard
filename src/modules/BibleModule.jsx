@@ -83,7 +83,7 @@ export default function BibleModule({ state, setState }) {
     <div className="card">
       <div className="card-header">
         <h2>Bible Reading</h2>
-        <span className="pill">{streak > 0 ? `${streak}-day streak` : 'Chronological plan'}</span>
+        <span className={`pill ${streak > 0 ? 'pill-good' : ''}`}>{streak > 0 ? `${streak}-day streak` : 'Chronological plan'}</span>
       </div>
 
       <div className="bible-daynav">

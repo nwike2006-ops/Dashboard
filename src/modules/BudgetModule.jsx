@@ -79,7 +79,7 @@ export default function BudgetModule({ state, setState }) {
   }
 
   return (
-    <div className="card card-wide">
+    <div className="card">
       <div className="card-header">
         <h2>Budget</h2>
         <span className="pill">{totalBudgeted > 0 ? `$${totalSpent.toFixed(0)} of $${totalBudgeted.toFixed(0)} this month` : 'Set budgets below to get started'}</span>

@@ -1,15 +1,11 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
-import TodayStrip from './modules/TodayStrip';
+import Home from './pages/Home';
+import ModulePage from './pages/ModulePage';
 import BibleModule, { useBibleState } from './modules/BibleModule';
 import WorkoutModule, { useWorkoutState } from './modules/WorkoutModule';
 import CarModule, { useCarState } from './modules/CarModule';
 import BudgetModule, { useBudgetState } from './modules/BudgetModule';
-
-const TODAY_LABEL = new Date().toLocaleDateString(undefined, {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-});
 
 function App() {
   const [bibleState, setBibleState] = useBibleState();
@@ -17,22 +13,49 @@ function App() {
   const [carState, setCarState] = useCarState();
   const [budgetState, setBudgetState] = useBudgetState();
 
+  const pageProps = { bibleState, workoutState, budgetState, carState };
+
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Dashboard</h1>
-        <span className="dashboard-date">{TODAY_LABEL}</span>
-      </header>
-
-      <TodayStrip bibleState={bibleState} workoutState={workoutState} budgetState={budgetState} carState={carState} />
-
-      <div className="module-grid">
-        <WorkoutModule state={workoutState} setState={setWorkoutState} />
-        <BibleModule state={bibleState} setState={setBibleState} />
-        <CarModule state={carState} setState={setCarState} />
-        <BudgetModule state={budgetState} setState={setBudgetState} />
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={<Home bibleState={bibleState} carState={carState} budgetState={budgetState} />}
+        />
+        <Route
+          path="/workout"
+          element={
+            <ModulePage {...pageProps}>
+              <WorkoutModule state={workoutState} setState={setWorkoutState} />
+            </ModulePage>
+          }
+        />
+        <Route
+          path="/bible"
+          element={
+            <ModulePage {...pageProps}>
+              <BibleModule state={bibleState} setState={setBibleState} />
+            </ModulePage>
+          }
+        />
+        <Route
+          path="/car"
+          element={
+            <ModulePage {...pageProps}>
+              <CarModule state={carState} setState={setCarState} />
+            </ModulePage>
+          }
+        />
+        <Route
+          path="/budget"
+          element={
+            <ModulePage {...pageProps}>
+              <BudgetModule state={budgetState} setState={setBudgetState} />
+            </ModulePage>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -170,7 +170,7 @@ export default function CarModule({ state, setState }) {
   const fillupDefaults = { mileage: mileage ?? '' };
 
   return (
-    <div className="card card-wide">
+    <div className="card">
       <div className="card-header">
         <h2>Car Maintenance</h2>
         <span className="pill">{mileage != null ? `${mileage.toLocaleString()} mi` : 'No mileage logged'}</span>

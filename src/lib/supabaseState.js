@@ -1,29 +1,23 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabaseClient';
-import { useAuth } from './AuthContext';
+
+const ROW_ID = 'main';
 
 // Same interface as the old localStorage-backed useStored: [value, setValue] where
-// setValue accepts either a value or an updater function. Persists to the
-// signed-in user's app_state row instead of the browser's localStorage, so data
-// now follows the account rather than the device.
+// setValue accepts either a value or an updater function. Persists to a single
+// shared row in Supabase instead of the browser's localStorage, so data now
+// follows the deployed app rather than the device — no accounts involved.
 export function useSupabaseState(column, defaultValue) {
-  const { user } = useAuth();
   const [data, setData] = useState(defaultValue);
   const [loading, setLoading] = useState(true);
-  const userIdRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      userIdRef.current = user.id;
       const { data: row, error } = await supabase
         .from('app_state')
         .select(column)
-        .eq('user_id', user.id)
+        .eq('id', ROW_ID)
         .maybeSingle();
       if (cancelled) return;
       if (error) console.error(`Failed to load ${column}:`, error);
@@ -35,20 +29,18 @@ export function useSupabaseState(column, defaultValue) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, column]);
+  }, [column]);
 
   const update = useCallback(
     (next) => {
       setData((prev) => {
         const resolved = typeof next === 'function' ? next(prev) : next;
-        if (userIdRef.current) {
-          supabase
-            .from('app_state')
-            .upsert({ user_id: userIdRef.current, [column]: resolved, updated_at: new Date().toISOString() })
-            .then(({ error }) => {
-              if (error) console.error(`Failed to save ${column}:`, error);
-            });
-        }
+        supabase
+          .from('app_state')
+          .upsert({ id: ROW_ID, [column]: resolved, updated_at: new Date().toISOString() })
+          .then(({ error }) => {
+            if (error) console.error(`Failed to save ${column}:`, error);
+          });
         return resolved;
       });
     },

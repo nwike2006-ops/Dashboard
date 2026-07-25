@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { todayStr, daysBetween, addMonths } from '../lib/storage';
 import { useSupabaseState } from '../lib/supabaseState';
-import { useAuth } from '../lib/AuthContext';
 import { savePhoto, getPhotoURL } from '../lib/photoStore';
 
 const DEFAULT_STATE = {
@@ -98,7 +97,6 @@ function GasStationCheck() {
 }
 
 function LogForm({ kind, defaults, onCancel, onSave }) {
-  const { user } = useAuth();
   const [mileage, setMileage] = useState(defaults.mileage ?? '');
   const [nextDueMileage, setNextDueMileage] = useState(defaults.nextDueMileage ?? '');
   const [nextDueDate, setNextDueDate] = useState(defaults.nextDueDate ?? '');
@@ -111,7 +109,7 @@ function LogForm({ kind, defaults, onCancel, onSave }) {
     setSaving(true);
     setError('');
     try {
-      const photoId = file ? await savePhoto(file, user.id) : null;
+      const photoId = file ? await savePhoto(file) : null;
       onSave({ mileage: Number(mileage), nextDueMileage: nextDueMileage ? Number(nextDueMileage) : null, nextDueDate: nextDueDate || null, photoId });
     } catch (err) {
       setError('Could not upload photo — try again.');
@@ -142,7 +140,7 @@ function LogForm({ kind, defaults, onCancel, onSave }) {
           </div>
         </>
       )}
-      {error && <p className="login-error">{error}</p>}
+      {error && <p className="form-error">{error}</p>}
       <div className="car-actions">
         <button className="primary-btn" type="button" onClick={handleSave} disabled={saving || !mileage}>
           {saving ? 'Saving…' : 'Save'}

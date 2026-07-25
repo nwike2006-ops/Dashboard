@@ -1,13 +1,13 @@
 // Car photos (odometer, oil-change stickers) live in Supabase Storage under
-// car-photos/{user_id}/{uuid}, gated by the RLS policies in supabase/schema.sql
-// so each user can only read/write their own folder.
+// car-photos/{uuid}. No per-user folders — see supabase/schema.sql, there's no
+// login, so anyone with the anon key can read this bucket.
 
 import { supabase } from './supabaseClient';
 
 const BUCKET = 'car-photos';
 
-export async function savePhoto(file, userId) {
-  const path = `${userId}/${crypto.randomUUID()}`;
+export async function savePhoto(file) {
+  const path = crypto.randomUUID();
   const { error } = await supabase.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
   return path;

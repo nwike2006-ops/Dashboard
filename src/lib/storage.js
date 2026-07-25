@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 export function todayStr() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -31,36 +29,6 @@ export function addMonths(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setMonth(d.getMonth() + n);
   return formatDate(d);
-}
-
-function read(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // localStorage unavailable (private browsing, quota) — fail silently, state stays in-memory for the session
-  }
-}
-
-// Persisted React state backed by localStorage, keyed by `key`. Same shape as useState.
-export function useStored(key, fallback) {
-  const [value, setValue] = useState(() => read(key, fallback));
-  const update = (next) => {
-    setValue((prev) => {
-      const resolved = typeof next === 'function' ? next(prev) : next;
-      write(key, resolved);
-      return resolved;
-    });
-  };
-  return [value, update];
 }
 
 // Streak helper: given the date a thing was last completed and today's date, returns the

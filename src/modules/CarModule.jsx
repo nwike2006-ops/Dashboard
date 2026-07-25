@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useStored, todayStr, daysBetween, addDays, addMonths } from '../lib/storage';
+import { todayStr, daysBetween, addMonths } from '../lib/storage';
+import { useSupabaseState } from '../lib/supabaseState';
+import { useAuth } from '../lib/AuthContext';
 import { savePhoto, getPhotoURL } from '../lib/photoStore';
 
 const DEFAULT_STATE = {
@@ -14,7 +16,7 @@ const DUE_SOON_DAYS = 14;
 const GAS_STATION_RADIUS_M = 250;
 
 export function useCarState() {
-  return useStored('ld_car', DEFAULT_STATE);
+  return useSupabaseState('car', DEFAULT_STATE);
 }
 
 export function latestMileage(state) {
@@ -43,16 +45,12 @@ export function oilStatus(state) {
 function PhotoThumb({ photoId }) {
   const [url, setUrl] = useState(null);
   useEffect(() => {
-    let objectUrl = null;
     let cancelled = false;
     getPhotoURL(photoId).then((u) => {
-      if (cancelled) { if (u) URL.revokeObjectURL(u); return; }
-      objectUrl = u;
-      setUrl(u);
+      if (!cancelled) setUrl(u);
     });
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [photoId]);
   return url ? <img className="car-thumb" src={url} alt="" /> : <div className="car-thumb" />;
@@ -100,17 +98,25 @@ function GasStationCheck() {
 }
 
 function LogForm({ kind, defaults, onCancel, onSave }) {
+  const { user } = useAuth();
   const [mileage, setMileage] = useState(defaults.mileage ?? '');
   const [nextDueMileage, setNextDueMileage] = useState(defaults.nextDueMileage ?? '');
   const [nextDueDate, setNextDueDate] = useState(defaults.nextDueDate ?? '');
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSave() {
     if (!mileage) return;
     setSaving(true);
-    const photoId = file ? await savePhoto(file) : null;
-    onSave({ mileage: Number(mileage), nextDueMileage: nextDueMileage ? Number(nextDueMileage) : null, nextDueDate: nextDueDate || null, photoId });
+    setError('');
+    try {
+      const photoId = file ? await savePhoto(file, user.id) : null;
+      onSave({ mileage: Number(mileage), nextDueMileage: nextDueMileage ? Number(nextDueMileage) : null, nextDueDate: nextDueDate || null, photoId });
+    } catch (err) {
+      setError('Could not upload photo — try again.');
+      console.error(err);
+    }
     setSaving(false);
   }
 
@@ -136,6 +142,7 @@ function LogForm({ kind, defaults, onCancel, onSave }) {
           </div>
         </>
       )}
+      {error && <p className="login-error">{error}</p>}
       <div className="car-actions">
         <button className="primary-btn" type="button" onClick={handleSave} disabled={saving || !mileage}>
           {saving ? 'Saving…' : 'Save'}

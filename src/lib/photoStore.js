@@ -1,65 +1,30 @@
-// Minimal IndexedDB wrapper for storing photo blobs (odometer photos, oil-change stickers).
-// localStorage is string-only with a ~5-10MB total quota, which a handful of photos would
-// blow through; IndexedDB is built for exactly this (blobs, much higher quota).
+// Car photos (odometer, oil-change stickers) live in Supabase Storage under
+// car-photos/{user_id}/{uuid}, gated by the RLS policies in supabase/schema.sql
+// so each user can only read/write their own folder.
 
-const DB_NAME = 'life-dashboard';
-const STORE_NAME = 'photos';
-const DB_VERSION = 1;
+import { supabase } from './supabaseClient';
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
-        request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+const BUCKET = 'car-photos';
+
+export async function savePhoto(file, userId) {
+  const path = `${userId}/${crypto.randomUUID()}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+  if (error) throw error;
+  return path;
 }
 
-export async function savePhoto(blob) {
-  const id = crypto.randomUUID();
-  const db = await openDB();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put({ id, blob, createdAt: Date.now() });
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
-  return id;
+// Bucket is private, so display needs a short-lived signed URL rather than a public one.
+export async function getPhotoURL(path) {
+  if (!path) return null;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+  if (error) {
+    console.error('Failed to sign photo URL:', error);
+    return null;
+  }
+  return data.signedUrl;
 }
 
-export async function getPhotoBlob(id) {
-  if (!id) return null;
-  const db = await openDB();
-  const record = await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get(id);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-  db.close();
-  return record ? record.blob : null;
-}
-
-// Convenience: blob -> object URL for use in <img src>. Caller should revoke it
-// (URL.revokeObjectURL) when the image unmounts to avoid piling up memory.
-export async function getPhotoURL(id) {
-  const blob = await getPhotoBlob(id);
-  return blob ? URL.createObjectURL(blob) : null;
-}
-
-export async function deletePhoto(id) {
-  if (!id) return;
-  const db = await openDB();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
+export async function deletePhoto(path) {
+  if (!path) return;
+  await supabase.storage.from(BUCKET).remove([path]);
 }

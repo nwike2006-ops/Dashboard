@@ -1,5 +1,6 @@
 import { getSession, splitDayForWeekday, TOTAL_WEEKS, PROGRAM_NOTES } from '../data/workoutPlan';
-import { useStored, todayStr, daysBetween } from '../lib/storage';
+import { todayStr, daysBetween } from '../lib/storage';
+import { useSupabaseState } from '../lib/supabaseState';
 
 const DEFAULT_STATE = {
   startDate: null, // resolved to today on first use, see useWorkoutState
@@ -7,9 +8,9 @@ const DEFAULT_STATE = {
 };
 
 export function useWorkoutState() {
-  const [state, setState] = useStored('ld_workout', DEFAULT_STATE);
+  const [state, setState, loading] = useSupabaseState('workout', DEFAULT_STATE);
   const startDate = state.startDate ?? todayStr();
-  return [{ ...state, startDate }, setState];
+  return [{ ...state, startDate }, setState, loading];
 }
 
 function weekNumberFor(startDate, dateStr) {

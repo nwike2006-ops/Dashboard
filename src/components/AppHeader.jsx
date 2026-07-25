@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { todayLabel } from '../lib/storage';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AppHeader({ back }) {
   return (
@@ -16,7 +17,12 @@ export default function AppHeader({ back }) {
           </span>
         )}
       </div>
-      <span className="app-header-date">{todayLabel()}</span>
+      <div className="app-header-right">
+        <span className="app-header-date">{todayLabel()}</span>
+        <button className="logout-btn" type="button" onClick={() => supabase.auth.signOut()}>
+          Sign out
+        </button>
+      </div>
     </header>
   );
 }

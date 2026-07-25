@@ -1,5 +1,6 @@
 import { expandDayReading, getRawDayLabel, anchorDayNumberForDate, PLAN_LENGTH } from '../data/biblePlan';
-import { useStored, todayStr, daysBetween, addDays, nextStreak } from '../lib/storage';
+import { todayStr, daysBetween, addDays, nextStreak } from '../lib/storage';
+import { useSupabaseState } from '../lib/supabaseState';
 
 const DEFAULT_STATE = {
   currentDay: null, // resolved on first read below
@@ -27,10 +28,10 @@ function computePace(currentDay, deadlineDate, today) {
 }
 
 export function useBibleState() {
-  const [state, setState] = useStored('ld_bible', DEFAULT_STATE);
+  const [state, setState, loading] = useSupabaseState('bible', DEFAULT_STATE);
   const currentDay = state.currentDay ?? anchorDayNumberForDate(todayStr());
   const deadlineDate = state.deadlineDate ?? defaultDeadlineFor(currentDay);
-  return [{ ...state, currentDay, deadlineDate }, setState];
+  return [{ ...state, currentDay, deadlineDate }, setState, loading];
 }
 
 export default function BibleModule({ state, setState }) {

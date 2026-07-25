@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../data/budgetDefaults';
-import { useStored, todayStr } from '../lib/storage';
+import { todayStr } from '../lib/storage';
+import { useSupabaseState } from '../lib/supabaseState';
 
 const DEFAULT_STATE = {
   accounts: DEFAULT_ACCOUNTS,
@@ -10,7 +11,7 @@ const DEFAULT_STATE = {
 };
 
 export function useBudgetState() {
-  return useStored('ld_budget', DEFAULT_STATE);
+  return useSupabaseState('budget', DEFAULT_STATE);
 }
 
 function normalize(desc) {

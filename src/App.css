@@ -1,6 +1,74 @@
 /* Mobile-first: base rules target phones, min-width queries progressively
    enhance for tablet/laptop. Phone is the primary surface for this app. */
 
+.loading-screen {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.login-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  background:
+    radial-gradient(140% 100% at 0% 0%, var(--accent-bg) 0%, transparent 60%),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  font-size: 18px;
+}
+
+.login-card .car-log-form-row input {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--bad);
+}
+
+.logout-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.logout-btn:hover {
+  color: var(--bad);
+}
+
 .dashboard {
   padding: 16px 16px 48px;
   margin: 0 auto;
@@ -57,6 +125,12 @@
 
 .app-header-back:hover {
   color: var(--accent);
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .app-header-date {

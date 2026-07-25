@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../data/budgetDefaults';
 import { todayStr } from '../lib/storage';
 import { useSupabaseState } from '../lib/supabaseState';
+import { useBudgetTransactions } from '../lib/useBudgetTransactions';
+import { usePlaidStatus } from '../lib/usePlaidStatus';
+import { supabase } from '../lib/supabaseClient';
+import PlaidConnectButton from '../components/PlaidConnectButton';
 
 const DEFAULT_STATE = {
   accounts: DEFAULT_ACCOUNTS,
   categories: DEFAULT_CATEGORIES,
-  transactions: [], // { id, date, description, amount, categoryId, accountId }
   merchantMemory: {}, // { normalizedDescription: categoryId } — learned from past corrections
 };
 
@@ -22,7 +25,20 @@ function currentMonthKey(dateStr = todayStr()) {
   return dateStr.slice(0, 7); // 'YYYY-MM'
 }
 
+function timeAgo(isoString) {
+  if (!isoString) return null;
+  const minutes = Math.round((Date.now() - new Date(isoString).getTime()) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
 export default function BudgetModule({ state, setState }) {
+  const { transactions, addTransaction: addTx, recategorize: recategorizeTx } = useBudgetTransactions();
+  const { linked, lastSyncedAt, reload: reloadPlaidStatus } = usePlaidStatus();
+  const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -31,7 +47,7 @@ export default function BudgetModule({ state, setState }) {
   });
 
   const month = currentMonthKey();
-  const monthTx = state.transactions.filter((t) => currentMonthKey(t.date) === month);
+  const monthTx = transactions.filter((t) => currentMonthKey(t.date) === month);
 
   const spentByCategory = {};
   for (const t of monthTx) {
@@ -53,30 +69,34 @@ export default function BudgetModule({ state, setState }) {
     setForm((f) => ({ ...f, description: value, categoryId: remembered || f.categoryId }));
   }
 
-  function addTransaction(e) {
+  async function addTransaction(e) {
     e.preventDefault();
     if (!form.description.trim() || !form.amount) return;
-    const id = crypto.randomUUID();
-    setState((prev) => ({
-      ...prev,
-      transactions: [
-        { id, date: todayStr(), description: form.description.trim(), amount: Number(form.amount), categoryId: form.categoryId, accountId: form.accountId },
-        ...prev.transactions,
-      ],
-      merchantMemory: { ...prev.merchantMemory, [normalize(form.description)]: form.categoryId },
-    }));
+    await addTx({
+      date: todayStr(),
+      description: form.description.trim(),
+      amount: Number(form.amount),
+      categoryId: form.categoryId,
+      accountId: form.accountId,
+    });
+    setState((prev) => ({ ...prev, merchantMemory: { ...prev.merchantMemory, [normalize(form.description)]: form.categoryId } }));
     setForm((f) => ({ ...f, description: '', amount: '' }));
   }
 
-  function recategorize(txId, categoryId) {
-    setState((prev) => {
-      const tx = prev.transactions.find((t) => t.id === txId);
-      return {
-        ...prev,
-        transactions: prev.transactions.map((t) => (t.id === txId ? { ...t, categoryId } : t)),
-        merchantMemory: tx ? { ...prev.merchantMemory, [normalize(tx.description)]: categoryId } : prev.merchantMemory,
-      };
-    });
+  async function recategorize(txId, categoryId) {
+    const tx = transactions.find((t) => t.id === txId);
+    await recategorizeTx(txId, categoryId);
+    if (tx) {
+      setState((prev) => ({ ...prev, merchantMemory: { ...prev.merchantMemory, [normalize(tx.description)]: categoryId } }));
+    }
+  }
+
+  async function syncNow() {
+    setSyncing(true);
+    const { error } = await supabase.functions.invoke('plaid-sync-transactions');
+    if (error) console.error('Manual sync failed:', error);
+    await reloadPlaidStatus();
+    setSyncing(false);
   }
 
   return (
@@ -84,6 +104,20 @@ export default function BudgetModule({ state, setState }) {
       <div className="card-header">
         <h2>Budget</h2>
         <span className="pill">{totalBudgeted > 0 ? `$${totalSpent.toFixed(0)} of $${totalBudgeted.toFixed(0)} this month` : 'Set budgets below to get started'}</span>
+      </div>
+
+      <div className="car-actions">
+        {linked ? (
+          <>
+            <span className={`pill pill-good`}>Chase connected</span>
+            <button className="secondary-btn" type="button" onClick={syncNow} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+            {lastSyncedAt && <span className="module-note">Last synced {timeAgo(lastSyncedAt)}</span>}
+          </>
+        ) : (
+          <PlaidConnectButton onLinked={reloadPlaidStatus} />
+        )}
       </div>
 
       <form className="tx-form" onSubmit={addTransaction}>
@@ -144,9 +178,9 @@ export default function BudgetModule({ state, setState }) {
           {monthTx.map((t) => (
             <div className="tx-row" key={t.id}>
               <span className="tx-date">{t.date.slice(5)}</span>
-              <span className="tx-desc">{t.description}</span>
+              <span className="tx-desc">{t.description}{t.source === 'plaid' && <span className="pill tx-source-pill">Chase</span>}</span>
               <span className="tx-amount">${Number(t.amount).toFixed(2)}</span>
-              <select value={t.categoryId} onChange={(e) => recategorize(t.id, e.target.value)}>
+              <select value={t.categoryId || ''} onChange={(e) => recategorize(t.id, e.target.value)}>
                 {state.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
@@ -154,7 +188,9 @@ export default function BudgetModule({ state, setState }) {
         </details>
       )}
       <p className="module-note">
-        Manual entry for now — Chase and Schwab sync land once we wire up Plaid/Schwab's API. Re-categorize anything and it'll remember that merchant next time.
+        {linked
+          ? "Chase transactions sync automatically. Schwab investing view is next. Re-categorize anything and it'll remember that merchant next time."
+          : 'Manual entry for now, or connect Chase above for automatic sync. Re-categorize anything and it\'ll remember that merchant next time.'}
       </p>
     </div>
   );

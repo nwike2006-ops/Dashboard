@@ -1,7 +1,8 @@
 import { expandDayReading } from '../data/biblePlan';
-import { getSession, splitDayForWeekday } from '../data/workoutPlan';
+import { splitDayForWeekday } from '../data/workoutPlan';
 import { oilStatus } from './CarModule';
 import { todayStr } from '../lib/storage';
+import { useBudgetTransactions } from '../lib/useBudgetTransactions';
 
 function currentMonthKey(dateStr) {
   return dateStr.slice(0, 7);
@@ -9,6 +10,7 @@ function currentMonthKey(dateStr) {
 
 export default function TodayStrip({ bibleState, workoutState, budgetState, carState }) {
   const today = todayStr();
+  const { transactions } = useBudgetTransactions();
 
   const chapters = expandDayReading(bibleState.currentDay);
   const checkedKeys = new Set(bibleState.checked[bibleState.currentDay] || []);
@@ -19,7 +21,7 @@ export default function TodayStrip({ bibleState, workoutState, budgetState, carS
   const dayKey = splitDayForWeekday(weekday);
   const workoutText = dayKey ? dayKey : 'Rest day';
 
-  const monthTx = budgetState.transactions.filter((t) => currentMonthKey(t.date) === currentMonthKey(today));
+  const monthTx = transactions.filter((t) => currentMonthKey(t.date) === currentMonthKey(today));
   const totalBudgeted = budgetState.categories.reduce((sum, c) => sum + Number(c.monthlyBudget || 0), 0);
   const totalSpent = monthTx.reduce((sum, t) => sum + Number(t.amount), 0);
   const remaining = totalBudgeted - totalSpent;

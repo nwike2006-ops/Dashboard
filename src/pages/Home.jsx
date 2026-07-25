@@ -4,6 +4,7 @@ import { expandDayReading, getRawDayLabel } from '../data/biblePlan';
 import { splitDayForWeekday } from '../data/workoutPlan';
 import { oilStatus } from '../modules/CarModule';
 import { todayStr } from '../lib/storage';
+import { useBudgetTransactions } from '../lib/useBudgetTransactions';
 
 function currentMonthKey(dateStr) {
   return dateStr.slice(0, 7);
@@ -27,6 +28,7 @@ function Tile({ to, accent, label, value, valueClass, sub }) {
 
 export default function Home({ bibleState, carState, budgetState }) {
   const today = todayStr();
+  const { transactions } = useBudgetTransactions();
 
   const weekday = new Date(today + 'T00:00:00').getDay();
   const dayKey = splitDayForWeekday(weekday);
@@ -35,7 +37,7 @@ export default function Home({ bibleState, carState, budgetState }) {
   const checkedKeys = new Set(bibleState.checked[bibleState.currentDay] || []);
   const bibleDone = chapters.length > 0 && chapters.every((c) => checkedKeys.has(c.key));
 
-  const monthTx = budgetState.transactions.filter((t) => currentMonthKey(t.date) === currentMonthKey(today));
+  const monthTx = transactions.filter((t) => currentMonthKey(t.date) === currentMonthKey(today));
   const totalBudgeted = budgetState.categories.reduce((sum, c) => sum + Number(c.monthlyBudget || 0), 0);
   const totalSpent = monthTx.reduce((sum, t) => sum + Number(t.amount), 0);
   const remaining = totalBudgeted - totalSpent;

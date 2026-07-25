@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 function rowToTx(row) {
@@ -19,6 +19,9 @@ function rowToTx(row) {
 export function useBudgetTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Unique per mount so React's dev-mode double-invoke (or a real remount)
+  // never tries to re-subscribe a channel name Supabase already has open.
+  const channelNameRef = useRef(`budget_transactions_changes_${crypto.randomUUID()}`);
 
   const reload = useCallback(async () => {
     try {
@@ -40,7 +43,7 @@ export function useBudgetTransactions() {
     let channel;
     try {
       channel = supabase
-        .channel('budget_transactions_changes')
+        .channel(channelNameRef.current)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_transactions' }, () => {
           reload();
         })

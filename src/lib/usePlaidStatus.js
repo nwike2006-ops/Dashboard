@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 // plaid_linked / plaid_last_synced_at live on the public app_state row (safe to
@@ -8,6 +8,9 @@ import { supabase } from './supabaseClient';
 export function usePlaidStatus() {
   const [linked, setLinked] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  // Unique per mount so React's dev-mode double-invoke (or a real remount)
+  // never tries to re-subscribe a channel name Supabase already has open.
+  const channelNameRef = useRef(`plaid_status_changes_${crypto.randomUUID()}`);
 
   const reload = useCallback(async () => {
     try {
@@ -29,7 +32,7 @@ export function usePlaidStatus() {
     let channel;
     try {
       channel = supabase
-        .channel('plaid_status_changes')
+        .channel(channelNameRef.current)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_state' }, () => reload())
         .subscribe();
     } catch (err) {

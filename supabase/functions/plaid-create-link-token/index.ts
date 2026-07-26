@@ -6,6 +6,10 @@ Deno.serve(async (req) => {
 
   try {
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/plaid-webhook`;
+    // Chase is an OAuth institution — Plaid needs to know exactly where to send the
+    // browser back to afterward. Must also be added to "Allowed redirect URIs" in
+    // the Plaid dashboard (Team Settings → API), or Plaid rejects/mishandles it.
+    const redirectUri = Deno.env.get('PLAID_REDIRECT_URI');
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: 'main' },
       client_name: 'Life Dashboard',
@@ -13,6 +17,7 @@ Deno.serve(async (req) => {
       country_codes: ['US'],
       language: 'en',
       webhook: webhookUrl,
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     });
 
     return new Response(JSON.stringify({ link_token: response.data.link_token }), {

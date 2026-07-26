@@ -75,6 +75,11 @@ create table if not exists plaid_items (
   access_token text not null,
   item_id text not null,
   sync_cursor text,
+  -- Simple mutex so overlapping webhook deliveries (Plaid fires several right
+  -- after linking) can't race each other into re-fetching the same "initial"
+  -- batch under different transaction_ids — see syncTransactions.ts.
+  syncing boolean not null default false,
+  sync_started_at timestamptz,
   created_at timestamptz not null default now()
 );
 

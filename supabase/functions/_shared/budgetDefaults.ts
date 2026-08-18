@@ -13,7 +13,6 @@ export const DEFAULT_CATEGORIES = [
   { id: 'transportation', name: 'Transportation / Gas', budgetType: 'fixed', budgetValue: 0 },
   { id: 'tithing', name: 'Tithing', budgetType: 'percent', budgetValue: 0 },
   { id: 'subscriptions', name: 'Subscriptions', budgetType: 'fixed', budgetValue: 0 },
-  { id: 'personal', name: 'Personal / Discretionary', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'personal', name: 'Personal / Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
   { id: 'savings-goal', name: 'Savings Transfer', budgetType: 'fixed', budgetValue: 0 },
-  { id: 'misc', name: 'Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
 ];

@@ -46,15 +46,25 @@ const PLAID_CATEGORY_MAP = {
   TRANSFER_OUT_SAVINGS: 'savings-goal',
   TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS: 'savings-goal',
   TRANSFER_OUT_ACCOUNT_TRANSFER: 'savings-goal',
-  BANK_FEES: 'misc',
-  BANK_FEES_INSUFFICIENT_FUNDS: 'misc',
-  BANK_FEES_OTHER_BANK_FEES: 'misc',
+  BANK_FEES: 'personal',
+  BANK_FEES_INSUFFICIENT_FUNDS: 'personal',
+  BANK_FEES_OTHER_BANK_FEES: 'personal',
 };
+
+// Plaid classifies every outgoing Zelle/Venmo/wire as a generic "transfer" —
+// it has no idea one of them is actually rent. These override rules are
+// checked before PLAID_CATEGORY_MAP for exactly that reason: a known payee
+// or recurring pattern is more trustworthy than Plaid's generic P2P-transfer
+// guess. Add a line here (not just a merchantMemory entry) for anyone paid
+// by Zelle/Venmo/wire whose transfer amount varies or whose description
+// carries a unique tracking id each time (merchantMemory's exact-string match
+// can't generalize across those).
+const OVERRIDE_RULES = [{ pattern: /charles henry/i, category: 'housing' }];
 
 // Plaid's own categorization frequently misses gas stations, restaurant
 // chains, and grocery stores whose merchant string carries a store number or
 // city suffix — these substring rules catch what PLAID_CATEGORY_MAP misses,
-// checked only as a fallback (before finally giving up and landing on 'misc').
+// checked only as a fallback (before finally giving up and landing on 'personal').
 const KEYWORD_RULES = [
   { pattern: /fuel|gas station|circle k|quiktrip|\bqt \d|chevron|shell #|exxon|conoco/i, category: 'transportation' },
   {
@@ -68,10 +78,17 @@ const KEYWORD_RULES = [
 
 // merchantMemory holds the user's own corrections (see Transactions.jsx) —
 // checked first so a merchant, once fixed, stays fixed on every future sync.
+// Order matters below: merchantMemory (explicit user correction) beats
+// OVERRIDE_RULES (known payee/pattern) beats Plaid's own category (accurate
+// for most retail but useless for P2P transfers) beats KEYWORD_RULES
+// (last-resort substring guesses) beats 'personal' as the final catch-all.
 function mapCategory(txn, merchantMemory) {
   const description = (txn.merchant_name || txn.name || '').trim();
   const remembered = merchantMemory[description.toLowerCase()];
   if (remembered) return remembered;
+
+  const overrideMatch = OVERRIDE_RULES.find((rule) => rule.pattern.test(description));
+  if (overrideMatch) return overrideMatch.category;
 
   const detailed = txn.personal_finance_category?.detailed;
   const primary = txn.personal_finance_category?.primary;
@@ -81,7 +98,7 @@ function mapCategory(txn, merchantMemory) {
   const keywordMatch = KEYWORD_RULES.find((rule) => rule.pattern.test(description));
   if (keywordMatch) return keywordMatch.category;
 
-  return 'misc';
+  return 'personal';
 }
 
 // A depository item's transactions all get lumped under its one configured

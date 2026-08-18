@@ -82,7 +82,7 @@ function HoldingsCard({ linked }) {
   );
 }
 
-export default function Accounts({ budgetState, setBudgetState, chasePlaid, schwabPlaid }) {
+export default function Accounts({ budgetState, setBudgetState, chasePlaid, schwabPlaid, marcusPlaid }) {
   function updateBalance(accountId, value) {
     setBudgetState((prev) => ({
       ...prev,
@@ -99,6 +99,7 @@ export default function Accounts({ budgetState, setBudgetState, chasePlaid, schw
       <BankConnectionCard title="Chase" target="chase" plaid={chasePlaid} />
       <BankConnectionCard title="Schwab" target="schwab" plaid={schwabPlaid} />
       <HoldingsCard linked={schwabPlaid.linked} />
+      <BankConnectionCard title="Marcus by Goldman Sachs" target="marcus" plaid={marcusPlaid} />
 
       <section className="card">
         <div className="card-header">

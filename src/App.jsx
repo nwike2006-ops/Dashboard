@@ -16,6 +16,7 @@ function App() {
   const { transactions, addTransaction, recategorize } = useBudgetTransactions();
   const chasePlaid = usePlaidStatus('chase');
   const schwabPlaid = usePlaidStatus('schwab');
+  const marcusPlaid = usePlaidStatus('marcus');
 
   if (budgetLoading) {
     return <div className="loading-screen">Loading your budget…</div>;
@@ -50,6 +51,7 @@ function App() {
               setBudgetState={setBudgetState}
               chasePlaid={chasePlaid}
               schwabPlaid={schwabPlaid}
+              marcusPlaid={marcusPlaid}
             />
           )}
         </main>

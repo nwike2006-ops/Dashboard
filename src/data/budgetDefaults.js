@@ -1,7 +1,7 @@
 export const DEFAULT_ACCOUNTS = [
   { id: 'chase-checking', name: 'Chase Checking', type: 'checking', balance: 0 },
-  { id: 'sofi-savings', name: 'SoFi Savings', type: 'savings', balance: 0 },
   { id: 'schwab', name: 'Schwab', type: 'investing', balance: 0 },
+  { id: 'marcus-savings', name: 'Marcus by Goldman Sachs', type: 'savings', balance: 0 },
 ];
 
 // Each category budgets one of three ways:

@@ -13,6 +13,12 @@ export const PLAID_TARGETS = {
     accountId: 'schwab',
     products: ['investments'],
   },
+  marcus: {
+    institutionName: 'Marcus by Goldman Sachs',
+    accountType: 'depository',
+    accountId: 'marcus-savings',
+    products: ['transactions'],
+  },
 };
 
 export function targetConfig(target) {

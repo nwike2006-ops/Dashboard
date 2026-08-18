@@ -1,65 +1,55 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useState } from 'react';
 import './App.css';
-import Home from './pages/Home';
-import ModulePage from './pages/ModulePage';
-import BibleModule, { useBibleState } from './modules/BibleModule';
-import WorkoutModule, { useWorkoutState } from './modules/WorkoutModule';
-import CarModule, { useCarState } from './modules/CarModule';
-import BudgetModule, { useBudgetState } from './modules/BudgetModule';
+import TopBar from './components/TopBar';
+import Sidebar, { MobileTabBar } from './components/Sidebar';
+import Overview from './pages/Overview';
+import Transactions from './pages/Transactions';
+import Budget from './pages/Budget';
+import Accounts from './pages/Accounts';
+import { useBudgetState } from './lib/useBudgetState';
+import { useBudgetTransactions } from './lib/useBudgetTransactions';
+import { usePlaidStatus } from './lib/usePlaidStatus';
 
 function App() {
-  const [bibleState, setBibleState, bibleLoading] = useBibleState();
-  const [workoutState, setWorkoutState, workoutLoading] = useWorkoutState();
-  const [carState, setCarState, carLoading] = useCarState();
+  const [view, setView] = useState('overview');
   const [budgetState, setBudgetState, budgetLoading] = useBudgetState();
+  const { transactions, addTransaction, recategorize } = useBudgetTransactions();
+  const plaid = usePlaidStatus();
 
-  const pageProps = { bibleState, workoutState, budgetState, carState };
-
-  if (bibleLoading || workoutLoading || carLoading || budgetLoading) {
-    return <div className="loading-screen">Loading your dashboard…</div>;
+  if (budgetLoading) {
+    return <div className="loading-screen">Loading your budget…</div>;
   }
 
+  const totalBalance = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={<Home bibleState={bibleState} carState={carState} budgetState={budgetState} />}
-        />
-        <Route
-          path="/workout"
-          element={
-            <ModulePage {...pageProps}>
-              <WorkoutModule state={workoutState} setState={setWorkoutState} />
-            </ModulePage>
-          }
-        />
-        <Route
-          path="/bible"
-          element={
-            <ModulePage {...pageProps}>
-              <BibleModule state={bibleState} setState={setBibleState} />
-            </ModulePage>
-          }
-        />
-        <Route
-          path="/car"
-          element={
-            <ModulePage {...pageProps}>
-              <CarModule state={carState} setState={setCarState} />
-            </ModulePage>
-          }
-        />
-        <Route
-          path="/budget"
-          element={
-            <ModulePage {...pageProps}>
-              <BudgetModule state={budgetState} setState={setBudgetState} />
-            </ModulePage>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <div className="app-shell">
+      <TopBar />
+      <div className="app-body">
+        <Sidebar view={view} setView={setView} totalBalance={totalBalance} />
+        <main className="app-main">
+          {view === 'overview' && (
+            <Overview budgetState={budgetState} transactions={transactions} setView={setView} />
+          )}
+          {view === 'transactions' && (
+            <Transactions
+              budgetState={budgetState}
+              setBudgetState={setBudgetState}
+              transactions={transactions}
+              addTransaction={addTransaction}
+              recategorize={recategorize}
+            />
+          )}
+          {view === 'budget' && (
+            <Budget budgetState={budgetState} setBudgetState={setBudgetState} transactions={transactions} />
+          )}
+          {view === 'accounts' && (
+            <Accounts budgetState={budgetState} setBudgetState={setBudgetState} plaid={plaid} />
+          )}
+        </main>
+      </div>
+      <MobileTabBar view={view} setView={setView} />
+    </div>
   );
 }
 

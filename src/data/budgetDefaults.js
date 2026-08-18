@@ -1,7 +1,7 @@
 export const DEFAULT_ACCOUNTS = [
-  { id: 'chase-checking', name: 'Chase Checking', type: 'checking' },
-  { id: 'sofi-savings', name: 'SoFi Savings', type: 'savings' },
-  { id: 'schwab', name: 'Schwab', type: 'investing' },
+  { id: 'chase-checking', name: 'Chase Checking', type: 'checking', balance: 0 },
+  { id: 'sofi-savings', name: 'SoFi Savings', type: 'savings', balance: 0 },
+  { id: 'schwab', name: 'Schwab', type: 'investing', balance: 0 },
 ];
 
 export const DEFAULT_CATEGORIES = [

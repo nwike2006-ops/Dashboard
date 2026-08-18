@@ -9,9 +9,6 @@
 
 create table if not exists app_state (
   id text primary key default 'main',
-  bible jsonb not null default '{}'::jsonb,
-  workout jsonb not null default '{}'::jsonb,
-  car jsonb not null default '{}'::jsonb,
   budget jsonb not null default '{}'::jsonb, -- accounts, categories, merchantMemory (NOT transactions — see budget_transactions)
   plaid_linked boolean not null default false,
   plaid_last_synced_at timestamptz,
@@ -84,18 +81,3 @@ create table if not exists plaid_items (
 );
 
 alter table plaid_items enable row level security;
-
--- Photo storage for odometer / oil-change-sticker photos.
-
-insert into storage.buckets (id, name, public)
-values ('car-photos', 'car-photos', false)
-on conflict (id) do nothing;
-
-create policy "anyone with the anon key can read photos" on storage.objects
-  for select using (bucket_id = 'car-photos');
-
-create policy "anyone with the anon key can upload photos" on storage.objects
-  for insert with check (bucket_id = 'car-photos');
-
-create policy "anyone with the anon key can delete photos" on storage.objects
-  for delete using (bucket_id = 'car-photos');

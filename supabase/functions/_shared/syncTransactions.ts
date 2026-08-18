@@ -1,4 +1,5 @@
 import { plaidClient } from './plaidClient.ts';
+import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from './budgetDefaults.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
@@ -32,6 +33,28 @@ function mapCategory(personalFinanceCategory) {
   const detailed = personalFinanceCategory?.detailed;
   const primary = personalFinanceCategory?.primary;
   return PLAID_CATEGORY_MAP[detailed] || PLAID_CATEGORY_MAP[primary] || 'misc';
+}
+
+// Transactions are all lumped under the single 'chase-checking' account (see
+// below), so balances follow the same simplification: sum whatever Plaid
+// returns across every account on the linked Item into that one figure,
+// rather than trying to model each real sub-account separately.
+async function syncBalances(supabaseAdmin, accessToken) {
+  const { data } = await plaidClient.accountsBalanceGet({ access_token: accessToken });
+  const total = data.accounts.reduce((sum, a) => sum + (a.balances.available ?? a.balances.current ?? 0), 0);
+
+  const { data: stateRow } = await supabaseAdmin.from('app_state').select('budget').eq('id', 'main').maybeSingle();
+  const budget = stateRow?.budget && Object.keys(stateRow.budget).length > 0
+    ? stateRow.budget
+    : { accounts: DEFAULT_ACCOUNTS, categories: DEFAULT_CATEGORIES, merchantMemory: {} };
+
+  const accounts = (budget.accounts || DEFAULT_ACCOUNTS).map((a) =>
+    a.id === 'chase-checking' ? { ...a, balance: total } : a
+  );
+
+  await supabaseAdmin
+    .from('app_state')
+    .upsert({ id: 'main', budget: { ...budget, accounts }, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 }
 
 // Pulls whatever's changed since the last stored cursor (or everything, on
@@ -105,6 +128,12 @@ export async function syncTransactions(supabaseAdmin) {
     }
 
     await supabaseAdmin.from('plaid_items').update({ sync_cursor: cursor }).eq('id', 'main');
+
+    try {
+      await syncBalances(supabaseAdmin, item.access_token);
+    } catch (err) {
+      console.error('Failed to sync balances:', err?.response?.data ?? err?.message ?? err);
+    }
 
     // plaid_linked/plaid_last_synced_at live on app_state (not plaid_items) because the
     // frontend's anon key can read app_state but is deliberately locked out of plaid_items.

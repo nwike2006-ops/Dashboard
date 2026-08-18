@@ -227,6 +227,10 @@
   gap: 14px;
 }
 
+.card + .card {
+  margin-top: 16px;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -690,4 +694,53 @@ textarea {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+/* ---------- Holdings ---------- */
+
+.holdings-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.holdings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.holdings-row:last-child {
+  border-bottom: none;
+}
+
+.holdings-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text-h);
+}
+
+.holdings-ticker {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.holdings-qty {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.holdings-value {
+  font-weight: 700;
+  color: var(--text-h);
+  width: 90px;
+  text-align: right;
 }

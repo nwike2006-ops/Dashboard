@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useInvestmentHoldings } from '../lib/useInvestmentHoldings';
 import PlaidConnectButton from '../components/PlaidConnectButton';
 
 function timeAgo(isoString) {
@@ -12,23 +13,81 @@ function timeAgo(isoString) {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-export default function Accounts({ budgetState, setBudgetState, plaid }) {
+function BankConnectionCard({ title, target, plaid }) {
   const [syncing, setSyncing] = useState(false);
-  const { linked, lastSyncedAt, reload: reloadPlaidStatus } = plaid;
+  const { linked, lastSyncedAt, reload } = plaid;
 
+  async function syncNow() {
+    setSyncing(true);
+    const { error } = await supabase.functions.invoke('plaid-sync-transactions', { body: { target } });
+    if (error) console.error('Manual sync failed:', error);
+    await reload();
+    setSyncing(false);
+  }
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>{title}</h2>
+        {linked && <span className="pill pill-good">Connected</span>}
+      </div>
+      <div className="car-actions">
+        {linked ? (
+          <>
+            <button className="secondary-btn" type="button" onClick={syncNow} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+            {lastSyncedAt && <span className="module-note">Last synced {timeAgo(lastSyncedAt)}</span>}
+          </>
+        ) : (
+          <PlaidConnectButton target={target} label={`Connect ${title}`} onLinked={reload} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function HoldingsCard({ linked }) {
+  const { holdings, loading } = useInvestmentHoldings('schwab');
+
+  if (!linked) return null;
+
+  const total = holdings.reduce((sum, h) => sum + h.value, 0);
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>Schwab holdings</h2>
+        <span className="pill">${total.toLocaleString(undefined, { maximumFractionDigits: 0 })} total</span>
+      </div>
+      {loading ? (
+        <p className="module-note">Loading holdings…</p>
+      ) : holdings.length === 0 ? (
+        <p className="module-note">No holdings synced yet — click Sync now above.</p>
+      ) : (
+        <div className="holdings-list">
+          {holdings.map((h) => (
+            <div className="holdings-row" key={h.id}>
+              <div className="holdings-name">
+                <span>{h.securityName}</span>
+                {h.ticker && <span className="holdings-ticker">{h.ticker}</span>}
+              </div>
+              {h.quantity != null && <span className="holdings-qty">{h.quantity.toLocaleString()} sh</span>}
+              <span className="holdings-value">${h.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function Accounts({ budgetState, setBudgetState, chasePlaid, schwabPlaid }) {
   function updateBalance(accountId, value) {
     setBudgetState((prev) => ({
       ...prev,
       accounts: prev.accounts.map((a) => (a.id === accountId ? { ...a, balance: value } : a)),
     }));
-  }
-
-  async function syncNow() {
-    setSyncing(true);
-    const { error } = await supabase.functions.invoke('plaid-sync-transactions');
-    if (error) console.error('Manual sync failed:', error);
-    await reloadPlaidStatus();
-    setSyncing(false);
   }
 
   const total = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
@@ -37,27 +96,9 @@ export default function Accounts({ budgetState, setBudgetState, plaid }) {
     <>
       <h1 className="page-title">Accounts</h1>
 
-      <section className="card">
-        <div className="card-header">
-          <h2>Bank connection</h2>
-          {linked && <span className="pill pill-good">Connected</span>}
-        </div>
-        <div className="car-actions">
-          {linked ? (
-            <>
-              <button className="secondary-btn" type="button" onClick={syncNow} disabled={syncing}>
-                {syncing ? 'Syncing…' : 'Sync now'}
-              </button>
-              {lastSyncedAt && <span className="module-note">Last synced {timeAgo(lastSyncedAt)}</span>}
-            </>
-          ) : (
-            <PlaidConnectButton onLinked={reloadPlaidStatus} />
-          )}
-        </div>
-        <p className="module-note">
-          {linked ? 'Transactions sync automatically once connected.' : 'Connect a bank to sync transactions automatically, or track balances manually below.'}
-        </p>
-      </section>
+      <BankConnectionCard title="Chase" target="chase" plaid={chasePlaid} />
+      <BankConnectionCard title="Schwab" target="schwab" plaid={schwabPlaid} />
+      <HoldingsCard linked={schwabPlaid.linked} />
 
       <section className="card">
         <div className="card-header">
@@ -83,6 +124,7 @@ export default function Accounts({ budgetState, setBudgetState, plaid }) {
             </div>
           ))}
         </div>
+        <p className="module-note">Balances sync automatically for connected accounts above; edit here for anything unconnected.</p>
       </section>
     </>
   );

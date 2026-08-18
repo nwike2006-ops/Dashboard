@@ -14,7 +14,8 @@ function App() {
   const [view, setView] = useState('overview');
   const [budgetState, setBudgetState, budgetLoading] = useBudgetState();
   const { transactions, addTransaction, recategorize } = useBudgetTransactions();
-  const plaid = usePlaidStatus();
+  const chasePlaid = usePlaidStatus('chase');
+  const schwabPlaid = usePlaidStatus('schwab');
 
   if (budgetLoading) {
     return <div className="loading-screen">Loading your budget…</div>;
@@ -44,7 +45,12 @@ function App() {
             <Budget budgetState={budgetState} setBudgetState={setBudgetState} transactions={transactions} />
           )}
           {view === 'accounts' && (
-            <Accounts budgetState={budgetState} setBudgetState={setBudgetState} plaid={plaid} />
+            <Accounts
+              budgetState={budgetState}
+              setBudgetState={setBudgetState}
+              chasePlaid={chasePlaid}
+              schwabPlaid={schwabPlaid}
+            />
           )}
         </main>
       </div>

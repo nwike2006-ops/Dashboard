@@ -1,31 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
-// plaid_linked / plaid_last_synced_at live on the public app_state row (safe to
-// expose — just status flags, not the actual Plaid access_token, which stays
-// server-side only in plaid_items). Subscribes to realtime so the UI flips to
-// "connected" right after linking, and "last synced" updates as syncs land.
-export function usePlaidStatus() {
+// plaid_status lives on the public app_state row (safe to expose — just
+// status flags per institution, not the actual Plaid access_token, which
+// stays server-side only in plaid_items). Subscribes to realtime so the UI
+// flips to "connected" right after linking, and "last synced" updates live.
+export function usePlaidStatus(target) {
   const [linked, setLinked] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
   // Unique per mount so React's dev-mode double-invoke (or a real remount)
   // never tries to re-subscribe a channel name Supabase already has open.
-  const channelNameRef = useRef(`plaid_status_changes_${crypto.randomUUID()}`);
+  const channelNameRef = useRef(`plaid_status_changes_${target}_${crypto.randomUUID()}`);
 
   const reload = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('app_state')
-        .select('plaid_linked, plaid_last_synced_at')
+        .select('plaid_status')
         .eq('id', 'main')
         .maybeSingle();
       if (error) throw error;
-      setLinked(!!data?.plaid_linked);
-      setLastSyncedAt(data?.plaid_last_synced_at ?? null);
+      const status = data?.plaid_status?.[target];
+      setLinked(!!status?.linked);
+      setLastSyncedAt(status?.lastSyncedAt ?? null);
     } catch (err) {
       console.error('Failed to load Plaid status:', err);
     }
-  }, []);
+  }, [target]);
 
   useEffect(() => {
     reload();

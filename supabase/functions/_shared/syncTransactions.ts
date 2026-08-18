@@ -1,5 +1,5 @@
 import { plaidClient } from './plaidClient.ts';
-import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from './budgetDefaults.ts';
+import { setAccountBalance, setPlaidStatus } from './appState.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
@@ -35,26 +35,14 @@ function mapCategory(personalFinanceCategory) {
   return PLAID_CATEGORY_MAP[detailed] || PLAID_CATEGORY_MAP[primary] || 'misc';
 }
 
-// Transactions are all lumped under the single 'chase-checking' account (see
-// below), so balances follow the same simplification: sum whatever Plaid
-// returns across every account on the linked Item into that one figure,
-// rather than trying to model each real sub-account separately.
-async function syncBalances(supabaseAdmin, accessToken) {
-  const { data } = await plaidClient.accountsBalanceGet({ access_token: accessToken });
+// A depository item's transactions all get lumped under its one configured
+// account_id (see plaidTargets.ts), so its balance follows the same
+// simplification: sum whatever Plaid returns across every account on the
+// linked Item into that one figure, rather than modeling each sub-account.
+async function syncBalance(supabaseAdmin, item) {
+  const { data } = await plaidClient.accountsBalanceGet({ access_token: item.access_token });
   const total = data.accounts.reduce((sum, a) => sum + (a.balances.available ?? a.balances.current ?? 0), 0);
-
-  const { data: stateRow } = await supabaseAdmin.from('app_state').select('budget').eq('id', 'main').maybeSingle();
-  const budget = stateRow?.budget && Object.keys(stateRow.budget).length > 0
-    ? stateRow.budget
-    : { accounts: DEFAULT_ACCOUNTS, categories: DEFAULT_CATEGORIES, merchantMemory: {} };
-
-  const accounts = (budget.accounts || DEFAULT_ACCOUNTS).map((a) =>
-    a.id === 'chase-checking' ? { ...a, balance: total } : a
-  );
-
-  await supabaseAdmin
-    .from('app_state')
-    .upsert({ id: 'main', budget: { ...budget, accounts }, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+  await setAccountBalance(supabaseAdmin, item.account_id, total);
 }
 
 // Pulls whatever's changed since the last stored cursor (or everything, on
@@ -67,14 +55,14 @@ async function syncBalances(supabaseAdmin, accessToken) {
 // not-yet-advanced cursor and both ask Plaid for "everything so far" — in
 // Sandbox that hands back the same fake merchants but with brand new
 // transaction_ids each time, so they don't dedupe and show up as duplicates.
-// The claim below makes sure only one sync actually runs at a time; a stale
-// lock (crashed mid-sync) expires after 2 minutes so it can't wedge forever.
-export async function syncTransactions(supabaseAdmin) {
+// The claim below makes sure only one sync actually runs at a time per item; a
+// stale lock (crashed mid-sync) expires after 2 minutes so it can't wedge forever.
+export async function syncTransactions(supabaseAdmin, itemRowId) {
   const staleThreshold = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const { data: claimed, error: claimError } = await supabaseAdmin
     .from('plaid_items')
     .update({ syncing: true, sync_started_at: new Date().toISOString() })
-    .eq('id', 'main')
+    .eq('id', itemRowId)
     .or(`syncing.eq.false,sync_started_at.lt.${staleThreshold}`)
     .select();
   if (claimError) throw claimError;
@@ -111,7 +99,7 @@ export async function syncTransactions(supabaseAdmin) {
           description: txn.merchant_name || txn.name,
           amount: txn.amount, // Plaid: positive = money out, matches this app's convention
           category_id: mapCategory(txn.personal_finance_category),
-          account_id: 'chase-checking',
+          account_id: item.account_id,
           source: 'plaid',
         },
         { onConflict: 'plaid_transaction_id' }
@@ -127,22 +115,18 @@ export async function syncTransactions(supabaseAdmin) {
       if (error) console.error('Failed to delete removed transaction:', error);
     }
 
-    await supabaseAdmin.from('plaid_items').update({ sync_cursor: cursor }).eq('id', 'main');
+    await supabaseAdmin.from('plaid_items').update({ sync_cursor: cursor }).eq('id', itemRowId);
 
     try {
-      await syncBalances(supabaseAdmin, item.access_token);
+      await syncBalance(supabaseAdmin, item);
     } catch (err) {
-      console.error('Failed to sync balances:', err?.response?.data ?? err?.message ?? err);
+      console.error('Failed to sync balance:', err?.response?.data ?? err?.message ?? err);
     }
 
-    // plaid_linked/plaid_last_synced_at live on app_state (not plaid_items) because the
-    // frontend's anon key can read app_state but is deliberately locked out of plaid_items.
-    await supabaseAdmin
-      .from('app_state')
-      .upsert({ id: 'main', plaid_linked: true, plaid_last_synced_at: new Date().toISOString() }, { onConflict: 'id' });
+    await setPlaidStatus(supabaseAdmin, itemRowId, { linked: true, lastSyncedAt: new Date().toISOString() });
 
     return { synced: added.length + modified.length, removed: removed.length, linked: true };
   } finally {
-    await supabaseAdmin.from('plaid_items').update({ syncing: false }).eq('id', 'main');
+    await supabaseAdmin.from('plaid_items').update({ syncing: false }).eq('id', itemRowId);
   }
 }

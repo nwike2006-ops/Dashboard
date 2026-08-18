@@ -10,8 +10,7 @@
 create table if not exists app_state (
   id text primary key default 'main',
   budget jsonb not null default '{}'::jsonb, -- accounts, categories, merchantMemory (NOT transactions — see budget_transactions)
-  plaid_linked boolean not null default false,
-  plaid_last_synced_at timestamptz,
+  plaid_status jsonb not null default '{}'::jsonb, -- { [target]: { linked, lastSyncedAt } }, e.g. target = 'chase' | 'schwab'
   updated_at timestamptz not null default now()
 );
 
@@ -67,8 +66,16 @@ alter publication supabase_realtime add table budget_transactions;
 -- key (used exclusively server-side, inside Edge Functions) can bypass RLS
 -- and reach it. The frontend/anon key cannot read this table, period.
 
+-- One row per linked institution (id = the 'target' string used throughout the
+-- Plaid functions and frontend, e.g. 'chase' or 'schwab' — see
+-- _shared/plaidTargets.ts). account_type decides which Plaid product/sync path
+-- applies: 'depository' syncs transactions (budget_transactions), 'investment'
+-- syncs holdings (investment_holdings).
 create table if not exists plaid_items (
-  id text primary key default 'main',
+  id text primary key,
+  institution_name text,
+  account_type text not null default 'depository', -- 'depository' | 'investment'
+  account_id text not null, -- matches an id in app_state.budget.accounts
   access_token text not null,
   item_id text not null,
   sync_cursor text,
@@ -81,3 +88,21 @@ create table if not exists plaid_items (
 );
 
 alter table plaid_items enable row level security;
+
+-- Investment holdings are a point-in-time snapshot (unlike transactions, Plaid
+-- doesn't give holdings a stable id to upsert against), so each sync just
+-- deletes and re-inserts the rows for that item — see syncHoldings.ts.
+create table if not exists investment_holdings (
+  id uuid primary key default gen_random_uuid(),
+  item_id text not null references plaid_items(id) on delete cascade,
+  security_name text not null,
+  ticker text,
+  quantity numeric,
+  value numeric not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table investment_holdings enable row level security;
+
+create policy "anyone with the anon key can read holdings" on investment_holdings
+  for select using (true);

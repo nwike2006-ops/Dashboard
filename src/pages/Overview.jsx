@@ -1,6 +1,7 @@
 import BarChart from '../components/BarChart';
 import { PlusIcon, BudgetIcon, AccountsIcon, ArrowUpRightIcon } from '../components/icons';
 import { todayStr, todayLabel } from '../lib/storage';
+import { isPayrollDeposit } from '../lib/income';
 
 function monthKey(dateStr) {
   return dateStr.slice(0, 7);
@@ -36,7 +37,10 @@ export default function Overview({ budgetState, transactions, setView }) {
   const chartData = chartMonths.map((key) => {
     const tx = transactions.filter((t) => monthKey(t.date) === key);
     const expense = tx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-    const income = tx.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    // Only real paychecks count as income here — Zelle/Venmo/wire transfers
+    // the user moves around for investing show up as credits too, but
+    // they're not income.
+    const income = tx.filter((t) => t.amount < 0 && isPayrollDeposit(t.description)).reduce((s, t) => s + Math.abs(t.amount), 0);
     return { label: monthLabel(key), a: income, b: expense };
   });
 

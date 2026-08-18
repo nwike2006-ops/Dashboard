@@ -1,5 +1,13 @@
 import { plaidClient } from './plaidClient.ts';
-import { setAccountBalance, setPlaidStatus } from './appState.ts';
+import { setAccountBalance, setPlaidStatus, setIncome } from './appState.ts';
+
+// Real paycheck deposits, as opposed to Zelle/Venmo/wire transfers the user
+// moves around for investing — only these should drive the budget's income
+// figure. Broad on purpose: any employer's ACH payroll descriptor contains
+// "payroll" somewhere in it.
+function isPayrollDeposit(description) {
+  return /payroll/i.test(description);
+}
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
@@ -165,6 +173,28 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
       await syncBalance(supabaseAdmin, item);
     } catch (err) {
       console.error('Failed to sync balance:', err?.response?.data ?? err?.message ?? err);
+    }
+
+    const sawNewPayroll = [...added, ...modified].some((txn) => isPayrollDeposit(txn.merchant_name || txn.name || ''));
+    if (sawNewPayroll) {
+      try {
+        // Average the last few real deposits rather than just the latest one —
+        // paycheck amounts vary (overtime, PTO, etc.), so one paycheck alone is
+        // a noisy basis for a monthly budget.
+        const { data: recentPayroll } = await supabaseAdmin
+          .from('budget_transactions')
+          .select('amount')
+          .ilike('description', '%payroll%')
+          .lt('amount', 0)
+          .order('date', { ascending: false })
+          .limit(3);
+        if (recentPayroll && recentPayroll.length > 0) {
+          const avg = recentPayroll.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / recentPayroll.length;
+          await setIncome(supabaseAdmin, Math.round(avg * 100) / 100);
+        }
+      } catch (err) {
+        console.error('Failed to update income from payroll:', err?.message ?? err);
+      }
     }
 
     await setPlaidStatus(supabaseAdmin, itemRowId, { linked: true, lastSyncedAt: new Date().toISOString() });

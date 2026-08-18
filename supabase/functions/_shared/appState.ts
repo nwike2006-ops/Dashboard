@@ -15,6 +15,21 @@ export async function setAccountBalance(supabaseAdmin, accountId, balance) {
     .upsert({ id: 'main', budget: { ...budget, accounts }, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 }
 
+// paycheckAmount here is auto-detected from real payroll deposits (see
+// isPayrollDeposit in syncTransactions.ts) — auto: true tells the Budget
+// page to show it as a detected figure rather than an editable guess.
+export async function setIncome(supabaseAdmin, paycheckAmount) {
+  const budget = await loadBudget(supabaseAdmin);
+  await supabaseAdmin.from('app_state').upsert(
+    {
+      id: 'main',
+      budget: { ...budget, income: { paycheckAmount, frequency: 'biweekly', auto: true } },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
+}
+
 // plaid_status lives on app_state (not plaid_items) because the frontend's
 // anon key can read app_state but is deliberately locked out of plaid_items.
 export async function setPlaidStatus(supabaseAdmin, target, patch) {

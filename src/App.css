@@ -599,6 +599,36 @@ textarea {
   color: var(--text-h);
 }
 
+/* ---------- Income ---------- */
+
+.income-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.income-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  min-width: 160px;
+}
+
+.income-form input,
+.income-form select {
+  padding: 11px 12px;
+  min-height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 16px;
+}
+
 /* ---------- Budget ---------- */
 
 .category-bars {

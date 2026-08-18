@@ -106,15 +106,24 @@ export default function Budget({ budgetState, setBudgetState, transactions }) {
               <div className="category-row" key={c.id}>
                 <div className="category-row-top">
                   <span>{c.name}</span>
-                  <span className={over ? 'over-budget' : ''}>
-                    ${spent.toFixed(0)} / $
-                    <input
-                      type="number"
-                      className="budget-input"
-                      value={c.monthlyBudget}
-                      onChange={(e) => updateCategoryBudget(c.id, e.target.value)}
-                    />
-                  </span>
+                  <div className="category-row-figures">
+                    <span className={`category-figure ${over ? 'over-budget' : ''}`}>
+                      <span className="category-figure-label">Spent</span>
+                      <span className="category-figure-value">${spent.toFixed(0)}</span>
+                    </span>
+                    <span className="category-figure">
+                      <span className="category-figure-label">Budget</span>
+                      <span className="category-figure-value">
+                        $
+                        <input
+                          type="number"
+                          className="budget-input"
+                          value={c.monthlyBudget}
+                          onChange={(e) => updateCategoryBudget(c.id, e.target.value)}
+                        />
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 <div className="bar-track">
                   <div className={`bar-fill${over ? ' over' : ''}`} style={{ width: `${pct}%` }} />

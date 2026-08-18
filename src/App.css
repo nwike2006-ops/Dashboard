@@ -639,15 +639,43 @@ textarea {
 
 .category-row-top {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
   font-size: 14px;
   color: var(--text-h);
   margin-bottom: 5px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.category-row-top .over-budget {
+.category-row-figures {
+  display: flex;
+  gap: 16px;
+}
+
+.category-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.category-figure-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.category-figure.over-budget {
   color: var(--bad);
   font-weight: 600;
+}
+
+.category-figure-value {
+  display: flex;
+  align-items: center;
 }
 
 .budget-input {

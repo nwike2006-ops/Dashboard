@@ -3,14 +3,15 @@ import { setAccountBalance, setPlaidStatus } from './appState.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
-// if those ids ever change). Anything unmapped falls into 'misc'; the user's
-// own merchant-memory corrections (see BudgetModule) take over from there,
-// same as they do for manually-entered transactions.
+// if those ids ever change).
 const PLAID_CATEGORY_MAP = {
   FOOD_AND_DRINK_GROCERIES: 'groceries',
   FOOD_AND_DRINK_RESTAURANT: 'personal',
   FOOD_AND_DRINK_FAST_FOOD: 'personal',
   FOOD_AND_DRINK_COFFEE: 'personal',
+  FOOD_AND_DRINK_VENDING_MACHINES: 'personal',
+  FOOD_AND_DRINK_OTHER_FOOD_AND_DRINK: 'personal',
+  FOOD_AND_DRINK: 'personal', // primary-only fallback for anything Plaid didn't sub-categorize
   RENT_AND_UTILITIES_RENT: 'housing',
   RENT_AND_UTILITIES_GAS_AND_ELECTRICITY: 'utilities',
   RENT_AND_UTILITIES_WATER: 'utilities',
@@ -20,19 +21,59 @@ const PLAID_CATEGORY_MAP = {
   TRANSPORTATION_PARKING: 'transportation',
   TRANSPORTATION_PUBLIC_TRANSIT: 'transportation',
   TRANSPORTATION_TAXIS_AND_RIDE_SHARES: 'transportation',
+  TRAVEL_RENTAL_CARS: 'transportation',
+  TRAVEL_PARKING: 'transportation',
+  TRAVEL_LODGING: 'personal',
+  TRAVEL_FLIGHTS: 'personal',
+  GENERAL_MERCHANDISE_SUPERSTORES: 'groceries',
+  GENERAL_MERCHANDISE_DISCOUNT_STORES: 'personal',
+  GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES: 'personal',
+  GENERAL_MERCHANDISE_ONLINE_MARKETPLACES: 'personal',
   GENERAL_SERVICES_INSURANCE: 'insurance',
-  ENTERTAINMENT: 'subscriptions',
+  ENTERTAINMENT: 'personal',
   GENERAL_SERVICES_SUBSCRIPTION: 'subscriptions',
   LOAN_PAYMENTS: 'debt',
   LOAN_PAYMENTS_CREDIT_CARD_PAYMENT: 'debt',
   TRANSFER_OUT: 'savings-goal',
   TRANSFER_OUT_SAVINGS: 'savings-goal',
+  TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS: 'savings-goal',
+  TRANSFER_OUT_ACCOUNT_TRANSFER: 'savings-goal',
+  BANK_FEES: 'misc',
+  BANK_FEES_INSUFFICIENT_FUNDS: 'misc',
+  BANK_FEES_OTHER_BANK_FEES: 'misc',
 };
 
-function mapCategory(personalFinanceCategory) {
-  const detailed = personalFinanceCategory?.detailed;
-  const primary = personalFinanceCategory?.primary;
-  return PLAID_CATEGORY_MAP[detailed] || PLAID_CATEGORY_MAP[primary] || 'misc';
+// Plaid's own categorization frequently misses gas stations, restaurant
+// chains, and grocery stores whose merchant string carries a store number or
+// city suffix — these substring rules catch what PLAID_CATEGORY_MAP misses,
+// checked only as a fallback (before finally giving up and landing on 'misc').
+const KEYWORD_RULES = [
+  { pattern: /fuel|gas station|circle k|quiktrip|\bqt \d|chevron|shell #|exxon|conoco/i, category: 'transportation' },
+  {
+    pattern:
+      /pizza|burger|wingstop|\bsubs\b|diner|grill|\bcafe\b|coffee|\bjuice\b|yogurt|smoothie|\bbar\b|restaurant|waffle|donut|doughnut|\btaco\b|nutrition/i,
+    category: 'personal',
+  },
+  { pattern: /walmart|wm supercenter|costco|trader joe|kroger|safeway|whole foods|\baldi\b/i, category: 'groceries' },
+  { pattern: /schwab|\bwise\b|vanguard|fidelity|robinhood|coinbase/i, category: 'savings-goal' },
+];
+
+// merchantMemory holds the user's own corrections (see Transactions.jsx) —
+// checked first so a merchant, once fixed, stays fixed on every future sync.
+function mapCategory(txn, merchantMemory) {
+  const description = (txn.merchant_name || txn.name || '').trim();
+  const remembered = merchantMemory[description.toLowerCase()];
+  if (remembered) return remembered;
+
+  const detailed = txn.personal_finance_category?.detailed;
+  const primary = txn.personal_finance_category?.primary;
+  if (PLAID_CATEGORY_MAP[detailed]) return PLAID_CATEGORY_MAP[detailed];
+  if (PLAID_CATEGORY_MAP[primary]) return PLAID_CATEGORY_MAP[primary];
+
+  const keywordMatch = KEYWORD_RULES.find((rule) => rule.pattern.test(description));
+  if (keywordMatch) return keywordMatch.category;
+
+  return 'misc';
 }
 
 // A depository item's transactions all get lumped under its one configured
@@ -73,6 +114,9 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
   const item = claimed[0];
 
   try {
+    const { data: stateRow } = await supabaseAdmin.from('app_state').select('budget').eq('id', 'main').maybeSingle();
+    const merchantMemory = stateRow?.budget?.merchantMemory || {};
+
     let cursor = item.sync_cursor;
     const added = [];
     const modified = [];
@@ -98,7 +142,7 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
           date: txn.date,
           description: txn.merchant_name || txn.name,
           amount: txn.amount, // Plaid: positive = money out, matches this app's convention
-          category_id: mapCategory(txn.personal_finance_category),
+          category_id: mapCategory(txn, merchantMemory),
           account_id: item.account_id,
           source: 'plaid',
         },

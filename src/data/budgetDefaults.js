@@ -16,8 +16,9 @@ export const DEFAULT_CATEGORIES = [
   { id: 'transportation', name: 'Transportation / Gas', budgetType: 'fixed', budgetValue: 0 },
   { id: 'tithing', name: 'Tithing', budgetType: 'percent', budgetValue: 0 },
   { id: 'subscriptions', name: 'Subscriptions', budgetType: 'fixed', budgetValue: 0 },
-  { id: 'personal', name: 'Personal / Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
   { id: 'savings-goal', name: 'Savings Transfer', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'roth-ira', name: 'Roth IRA', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'personal', name: 'Personal / Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
 ];
 
 // Income isn't tied to a category — it's a single paycheck-based estimate

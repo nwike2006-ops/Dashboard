@@ -634,30 +634,73 @@ textarea {
 .category-bars {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
-.category-row-top {
+.category-row {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.category-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.category-row-header {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 14px;
-  color: var(--text-h);
-  margin-bottom: 5px;
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-row-name {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.category-type-control {
+  display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.category-type-control select {
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-h);
+}
+
+.category-type-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-h);
 }
 
 .category-row-figures {
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
 .category-figure {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
 }
 
 .category-figure-label {
@@ -665,17 +708,17 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text);
-  opacity: 0.6;
-}
-
-.category-figure.over-budget {
-  color: var(--bad);
-  font-weight: 600;
+  opacity: 0.65;
 }
 
 .category-figure-value {
-  display: flex;
-  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.category-figure.over-budget .category-figure-value {
+  color: var(--bad);
 }
 
 .budget-input {
@@ -684,7 +727,7 @@ textarea {
   padding: 2px 6px;
   border-radius: 6px;
   border: 1px solid var(--border-strong);
-  background: var(--surface-2);
+  background: var(--surface);
   color: inherit;
   font: inherit;
   font-size: 14px;

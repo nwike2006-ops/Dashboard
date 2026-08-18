@@ -4,15 +4,21 @@ export const DEFAULT_ACCOUNTS = [
   { id: 'schwab', name: 'Schwab', type: 'investing', balance: 0 },
 ];
 
+// Each category budgets one of three ways:
+//   'fixed'     — a flat dollar amount every month (e.g. rent)
+//   'percent'   — a % of that month's income (e.g. tithing, savings)
+//   'remainder' — whatever's left of income after every other category is
+//                 accounted for (splits evenly if more than one category uses it)
 export const DEFAULT_CATEGORIES = [
-  { id: 'housing', name: 'Rent / Housing', monthlyBudget: 0 },
-  { id: 'utilities', name: 'Utilities', monthlyBudget: 0 },
-  { id: 'groceries', name: 'Groceries', monthlyBudget: 0 },
-  { id: 'transportation', name: 'Transportation / Gas', monthlyBudget: 0 },
-  { id: 'subscriptions', name: 'Subscriptions', monthlyBudget: 0 },
-  { id: 'personal', name: 'Personal / Discretionary', monthlyBudget: 0 },
-  { id: 'savings-goal', name: 'Savings Transfer', monthlyBudget: 0 },
-  { id: 'misc', name: 'Miscellaneous', monthlyBudget: 0 },
+  { id: 'housing', name: 'Rent / Housing', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'utilities', name: 'Utilities', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'groceries', name: 'Groceries', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'transportation', name: 'Transportation / Gas', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'tithing', name: 'Tithing', budgetType: 'percent', budgetValue: 0 },
+  { id: 'subscriptions', name: 'Subscriptions', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'personal', name: 'Personal / Discretionary', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'savings-goal', name: 'Savings Transfer', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'misc', name: 'Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
 ];
 
 // Income isn't tied to a category — it's a single paycheck-based estimate

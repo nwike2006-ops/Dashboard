@@ -7,12 +7,13 @@ export const DEFAULT_ACCOUNTS = [
 ];
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'housing', name: 'Rent / Housing', monthlyBudget: 0 },
-  { id: 'utilities', name: 'Utilities', monthlyBudget: 0 },
-  { id: 'groceries', name: 'Groceries', monthlyBudget: 0 },
-  { id: 'transportation', name: 'Transportation / Gas', monthlyBudget: 0 },
-  { id: 'subscriptions', name: 'Subscriptions', monthlyBudget: 0 },
-  { id: 'personal', name: 'Personal / Discretionary', monthlyBudget: 0 },
-  { id: 'savings-goal', name: 'Savings Transfer', monthlyBudget: 0 },
-  { id: 'misc', name: 'Miscellaneous', monthlyBudget: 0 },
+  { id: 'housing', name: 'Rent / Housing', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'utilities', name: 'Utilities', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'groceries', name: 'Groceries', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'transportation', name: 'Transportation / Gas', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'tithing', name: 'Tithing', budgetType: 'percent', budgetValue: 0 },
+  { id: 'subscriptions', name: 'Subscriptions', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'personal', name: 'Personal / Discretionary', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'savings-goal', name: 'Savings Transfer', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'misc', name: 'Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
 ];

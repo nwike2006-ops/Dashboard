@@ -2,6 +2,8 @@ import BarChart from '../components/BarChart';
 import { PlusIcon, BudgetIcon, AccountsIcon, ArrowUpRightIcon } from '../components/icons';
 import { todayStr, todayLabel } from '../lib/storage';
 import { isPayrollDeposit } from '../lib/income';
+import { netSpentByCategory } from '../lib/spending';
+import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
 
 function monthKey(dateStr) {
   return dateStr.slice(0, 7);
@@ -27,8 +29,10 @@ export default function Overview({ budgetState, transactions, setView }) {
   const month = monthKey(today);
   const monthTx = transactions.filter((t) => monthKey(t.date) === month);
 
-  const totalBudgeted = budgetState.categories.reduce((sum, c) => sum + Number(c.monthlyBudget || 0), 0);
-  const totalSpent = monthTx.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+  const income = monthlyIncome(budgetState.income);
+  const effectiveBudgets = computeCategoryBudgets(budgetState.categories, income);
+  const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
+  const totalSpent = Object.values(netSpentByCategory(monthTx)).reduce((a, b) => a + b, 0);
   const remaining = totalBudgeted - totalSpent;
 
   const totalBalance = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
@@ -36,7 +40,7 @@ export default function Overview({ budgetState, transactions, setView }) {
   const chartMonths = lastNMonths(6);
   const chartData = chartMonths.map((key) => {
     const tx = transactions.filter((t) => monthKey(t.date) === key);
-    const expense = tx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const expense = Object.values(netSpentByCategory(tx)).reduce((s, v) => s + v, 0);
     // Only real paychecks count as income here — Zelle/Venmo/wire transfers
     // the user moves around for investing show up as credits too, but
     // they're not income.

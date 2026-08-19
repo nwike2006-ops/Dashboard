@@ -59,7 +59,18 @@ const PLAID_CATEGORY_MAP = {
 // by Zelle/Venmo/wire whose transfer amount varies or whose description
 // carries a unique tracking id each time (merchantMemory's exact-string match
 // can't generalize across those).
-const OVERRIDE_RULES = [{ pattern: /charles henry/i, category: 'housing' }];
+// "Charles Henry" isn't matched as a fixed phrase — Chase's Zelle memo
+// sometimes includes a middle initial ("Charles E Henry") which would break
+// an exact substring match, so this allows anything between the two names.
+// DoorDash (and other delivery/rideshare apps routed through Cash App/Venmo)
+// gets the same override treatment: Plaid classifies P2P-app transactions as
+// a generic "transfer" based on the payment rail, not what was purchased —
+// that's reliably wrong for a named merchant like this, so it's called out
+// here rather than trusting Plaid's category.
+const OVERRIDE_RULES = [
+  { pattern: /charles\b[\s\S]*?\bhenry\b/i, category: 'housing' },
+  { pattern: /doordash|grubhub|uber\s*eats|postmates/i, category: 'personal' },
+];
 
 // Plaid's own categorization frequently misses gas stations, restaurant
 // chains, and grocery stores whose merchant string carries a store number or

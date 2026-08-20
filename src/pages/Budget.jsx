@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { todayStr } from '../lib/storage';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
@@ -7,6 +8,20 @@ function monthKey(dateStr = todayStr()) {
 }
 
 export default function Budget({ budgetState, setBudgetState, transactions, recategorize }) {
+  const [expandedCategories, setExpandedCategories] = useState(() => new Set());
+
+  function toggleCategory(categoryId) {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  }
+
   const month = monthKey();
   const monthTx = transactions.filter((t) => monthKey(t.date) === month);
   const spentByCategory = netSpentByCategory(monthTx);
@@ -145,6 +160,8 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
             const remaining = budget - spent;
             const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
             const over = budget > 0 && spent > budget;
+            const categoryTx = monthTx.filter((t) => t.categoryId === c.id);
+            const isExpanded = expandedCategories.has(c.id);
             return (
               <div className="category-row" key={c.id}>
                 <div className="category-row-header">
@@ -188,6 +205,41 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                 <div className="bar-track">
                   <div className={`bar-fill${over ? ' over' : ''}`} style={{ width: `${pct}%` }} />
                 </div>
+
+                <button
+                  type="button"
+                  className="category-expand-toggle"
+                  onClick={() => toggleCategory(c.id)}
+                  disabled={categoryTx.length === 0}
+                >
+                  {categoryTx.length === 0
+                    ? 'No transactions this month'
+                    : `${isExpanded ? 'Hide' : 'Show'} ${categoryTx.length} transaction${categoryTx.length === 1 ? '' : 's'} ${isExpanded ? '▴' : '▾'}`}
+                </button>
+
+                {isExpanded && categoryTx.length > 0 && (
+                  <div className="tx-table category-tx-table">
+                    {categoryTx.map((t) => (
+                      <div className="tx-row" key={t.id}>
+                        <span className="tx-date">{t.date.slice(5)}</span>
+                        <span className="tx-desc">
+                          {t.description}
+                          {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
+                        </span>
+                        <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
+                          {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
+                        </span>
+                        <select value={t.categoryId || ''} onChange={(e) => handleRecategorize(t.id, e.target.value)}>
+                          {budgetState.categories.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

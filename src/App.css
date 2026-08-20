@@ -599,6 +599,31 @@ textarea {
   color: var(--text-h);
 }
 
+.tx-ignore-btn {
+  font-size: 12px;
+  padding: 6px 10px;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tx-ignore-btn:hover {
+  background: var(--surface-2);
+}
+
+.tx-row-excluded {
+  opacity: 0.55;
+}
+
+.tx-excluded-pill {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
 /* ---------- Income ---------- */
 
 .income-form {

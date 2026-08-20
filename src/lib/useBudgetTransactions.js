@@ -10,6 +10,7 @@ function rowToTx(row) {
     categoryId: row.category_id,
     accountId: row.account_id,
     source: row.source,
+    excluded: row.excluded,
   };
 }
 
@@ -81,5 +82,14 @@ export function useBudgetTransactions() {
     }
   }
 
-  return { transactions, loading, addTransaction, recategorize };
+  async function setExcluded(id, excluded) {
+    try {
+      const { error } = await supabase.from('budget_transactions').update({ excluded }).eq('id', id);
+      if (error) console.error('Failed to update excluded flag:', error);
+    } catch (err) {
+      console.error('Failed to update excluded flag:', err);
+    }
+  }
+
+  return { transactions, loading, addTransaction, recategorize, setExcluded };
 }

@@ -38,6 +38,12 @@ create table if not exists budget_transactions (
   account_id text not null default 'chase-checking',
   plaid_transaction_id text unique,
   source text not null default 'manual', -- 'manual' | 'plaid'
+  -- User-controlled: excludes this transaction from category spending totals
+  -- without deleting it, for cases like a canceled subscription's last charge
+  -- that shouldn't keep counting against the budget. Manual, not auto-detected
+  -- — see netSpentByCategory's REFUND_PATTERNS comment for why auto-matching
+  -- refunds is deliberately narrow.
+  excluded boolean not null default false,
   created_at timestamptz not null default now()
 );
 

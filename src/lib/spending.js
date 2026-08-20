@@ -21,6 +21,7 @@ function isKnownRefund(description) {
 export function netSpentByCategory(transactions) {
   const totals = {};
   for (const t of transactions) {
+    if (t.excluded) continue; // user manually marked this as not real spending
     const amount = Number(t.amount);
     if (amount > 0) {
       totals[t.categoryId] = (totals[t.categoryId] || 0) + amount;

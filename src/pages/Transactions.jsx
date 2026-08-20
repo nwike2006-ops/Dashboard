@@ -5,7 +5,7 @@ function normalize(desc) {
   return desc.trim().toLowerCase();
 }
 
-export default function Transactions({ budgetState, setBudgetState, transactions, addTransaction, recategorize }) {
+export default function Transactions({ budgetState, setBudgetState, transactions, addTransaction, recategorize, setExcluded }) {
   const needsReview = transactions.filter((t) => t.categoryId === 'needs-review');
   const [form, setForm] = useState({
     description: '',
@@ -99,11 +99,12 @@ export default function Transactions({ budgetState, setBudgetState, transactions
           </p>
           <div className="tx-table">
             {needsReview.map((t) => (
-              <div className="tx-row" key={t.id}>
+              <div className={`tx-row${t.excluded ? ' tx-row-excluded' : ''}`} key={t.id}>
                 <span className="tx-date">{t.date.slice(5)}</span>
                 <span className="tx-desc">
                   {t.description}
                   {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
+                  {t.excluded && <span className="pill tx-excluded-pill">Ignored</span>}
                 </span>
                 <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
                   {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
@@ -115,6 +116,14 @@ export default function Transactions({ budgetState, setBudgetState, transactions
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  className="tx-ignore-btn"
+                  title="Exclude this transaction from category spending totals without deleting it"
+                  onClick={() => setExcluded(t.id, !t.excluded)}
+                >
+                  {t.excluded ? 'Include' : 'Ignore'}
+                </button>
               </div>
             ))}
           </div>
@@ -131,11 +140,12 @@ export default function Transactions({ budgetState, setBudgetState, transactions
         ) : (
           <div className="tx-table">
             {transactions.map((t) => (
-              <div className="tx-row" key={t.id}>
+              <div className={`tx-row${t.excluded ? ' tx-row-excluded' : ''}`} key={t.id}>
                 <span className="tx-date">{t.date.slice(5)}</span>
                 <span className="tx-desc">
                   {t.description}
                   {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
+                  {t.excluded && <span className="pill tx-excluded-pill">Ignored</span>}
                 </span>
                 <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
                   {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
@@ -147,6 +157,14 @@ export default function Transactions({ budgetState, setBudgetState, transactions
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  className="tx-ignore-btn"
+                  title="Exclude this transaction from category spending totals without deleting it"
+                  onClick={() => setExcluded(t.id, !t.excluded)}
+                >
+                  {t.excluded ? 'Include' : 'Ignore'}
+                </button>
               </div>
             ))}
           </div>

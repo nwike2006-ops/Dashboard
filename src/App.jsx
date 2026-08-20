@@ -13,7 +13,7 @@ import { usePlaidStatus } from './lib/usePlaidStatus';
 function App() {
   const [view, setView] = useState('overview');
   const [budgetState, setBudgetState, budgetLoading] = useBudgetState();
-  const { transactions, addTransaction, recategorize } = useBudgetTransactions();
+  const { transactions, addTransaction, recategorize, setExcluded } = useBudgetTransactions();
   const chasePlaid = usePlaidStatus('chase');
   const schwabPlaid = usePlaidStatus('schwab');
   const marcusPlaid = usePlaidStatus('marcus');
@@ -40,6 +40,7 @@ function App() {
               transactions={transactions}
               addTransaction={addTransaction}
               recategorize={recategorize}
+              setExcluded={setExcluded}
             />
           )}
           {view === 'budget' && (
@@ -48,6 +49,7 @@ function App() {
               setBudgetState={setBudgetState}
               transactions={transactions}
               recategorize={recategorize}
+              setExcluded={setExcluded}
             />
           )}
           {view === 'accounts' && (

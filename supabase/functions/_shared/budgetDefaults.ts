@@ -16,4 +16,5 @@ export const DEFAULT_CATEGORIES = [
   { id: 'savings-goal', name: 'Savings Transfer', budgetType: 'fixed', budgetValue: 0 },
   { id: 'roth-ira', name: 'Roth IRA', budgetType: 'fixed', budgetValue: 0 },
   { id: 'personal', name: 'Personal / Miscellaneous', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'needs-review', name: 'Needs Review', budgetType: 'fixed', budgetValue: 0 },
 ];

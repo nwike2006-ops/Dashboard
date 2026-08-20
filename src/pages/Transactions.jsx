@@ -6,6 +6,7 @@ function normalize(desc) {
 }
 
 export default function Transactions({ budgetState, setBudgetState, transactions, addTransaction, recategorize }) {
+  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review');
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -86,6 +87,39 @@ export default function Transactions({ budgetState, setBudgetState, transactions
           </button>
         </form>
       </section>
+
+      {needsReview.length > 0 && (
+        <section className="card needs-review-card">
+          <div className="card-header">
+            <h2>Needs Review</h2>
+            <span className="pill">{needsReview.length} flagged</span>
+          </div>
+          <p className="module-note">
+            Paul couldn&apos;t confidently place these — take a look and pick the right category.
+          </p>
+          <div className="tx-table">
+            {needsReview.map((t) => (
+              <div className="tx-row" key={t.id}>
+                <span className="tx-date">{t.date.slice(5)}</span>
+                <span className="tx-desc">
+                  {t.description}
+                  {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
+                </span>
+                <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
+                  {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
+                </span>
+                <select value={t.categoryId || ''} onChange={(e) => handleRecategorize(t.id, e.target.value)}>
+                  {budgetState.categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="card">
         <div className="card-header">

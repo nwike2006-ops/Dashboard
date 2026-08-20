@@ -6,14 +6,18 @@ function monthKey(dateStr = todayStr()) {
   return dateStr.slice(0, 7);
 }
 
-export default function Budget({ budgetState, setBudgetState, transactions }) {
+export default function Budget({ budgetState, setBudgetState, transactions, recategorize }) {
   const month = monthKey();
   const monthTx = transactions.filter((t) => monthKey(t.date) === month);
   const spentByCategory = netSpentByCategory(monthTx);
 
   const income = monthlyIncome(budgetState.income);
-  const effectiveBudgets = computeCategoryBudgets(budgetState.categories, income);
-  const hasRemainderCategory = budgetState.categories.some((c) => c.budgetType === 'remainder');
+  // Needs Review isn't a real spending category — it's a flag, not something to set a
+  // dollar target for — so it's excluded from the budget-bar list and shown separately.
+  const budgetableCategories = budgetState.categories.filter((c) => c.id !== 'needs-review');
+  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review');
+  const effectiveBudgets = computeCategoryBudgets(budgetableCategories, income);
+  const hasRemainderCategory = budgetableCategories.some((c) => c.budgetType === 'remainder');
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
   const totalSpent = Object.values(spentByCategory).reduce((a, b) => a + b, 0);
   const leftToBudget = income - totalBudgeted;
@@ -27,6 +31,15 @@ export default function Budget({ budgetState, setBudgetState, transactions }) {
 
   function updateIncome(field, value) {
     setBudgetState((prev) => ({ ...prev, income: { ...prev.income, [field]: value } }));
+  }
+
+  async function handleRecategorize(txId, categoryId) {
+    const tx = transactions.find((t) => t.id === txId);
+    await recategorize(txId, categoryId);
+    if (tx) {
+      const key = tx.description.trim().toLowerCase();
+      setBudgetState((prev) => ({ ...prev, merchantMemory: { ...prev.merchantMemory, [key]: categoryId } }));
+    }
   }
 
   return (
@@ -86,13 +99,47 @@ export default function Budget({ budgetState, setBudgetState, transactions }) {
         )}
       </section>
 
+      {needsReview.length > 0 && (
+        <section className="card">
+          <div className="card-header">
+            <h2>Needs Review</h2>
+            <span className="pill">{needsReview.length} flagged</span>
+          </div>
+          <p className="module-note">
+            Paul couldn&apos;t confidently place these — not a budget line, just sort them into the
+            right category below.
+          </p>
+          <div className="tx-table">
+            {needsReview.map((t) => (
+              <div className="tx-row" key={t.id}>
+                <span className="tx-date">{t.date.slice(5)}</span>
+                <span className="tx-desc">
+                  {t.description}
+                  {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
+                </span>
+                <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
+                  {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
+                </span>
+                <select value={t.categoryId || ''} onChange={(e) => handleRecategorize(t.id, e.target.value)}>
+                  {budgetState.categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <div className="card-header">
           <h2>Category budgets</h2>
           <span className="pill">{totalBudgeted > 0 ? `$${totalSpent.toFixed(0)} of $${totalBudgeted.toFixed(0)} this month` : 'Set budgets below to get started'}</span>
         </div>
         <div className="category-bars">
-          {budgetState.categories.map((c) => {
+          {budgetableCategories.map((c) => {
             const spent = spentByCategory[c.id] || 0;
             const budget = effectiveBudgets[c.id] || 0;
             const remaining = budget - spent;

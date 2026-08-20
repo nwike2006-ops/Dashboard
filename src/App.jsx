@@ -43,7 +43,12 @@ function App() {
             />
           )}
           {view === 'budget' && (
-            <Budget budgetState={budgetState} setBudgetState={setBudgetState} transactions={transactions} />
+            <Budget
+              budgetState={budgetState}
+              setBudgetState={setBudgetState}
+              transactions={transactions}
+              recategorize={recategorize}
+            />
           )}
           {view === 'accounts' && (
             <Accounts

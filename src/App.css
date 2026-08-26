@@ -615,13 +615,8 @@ textarea {
   background: var(--surface-2);
 }
 
-.tx-row-excluded {
-  opacity: 0.55;
-}
-
-.tx-excluded-pill {
-  background: var(--warn-bg);
-  color: var(--warn);
+.tx-ignored-drawer {
+  margin-top: 8px;
 }
 
 /* ---------- Income ---------- */

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { todayStr } from '../lib/storage';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
+import TxList from '../components/TxList';
 
 function monthKey(dateStr = todayStr()) {
   return dateStr.slice(0, 7);
@@ -30,7 +31,9 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   // Needs Review isn't a real spending category — it's a flag, not something to set a
   // dollar target for — so it's excluded from the budget-bar list and shown separately.
   const budgetableCategories = budgetState.categories.filter((c) => c.id !== 'needs-review');
-  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review');
+  // Needs Review is for unclear spending, not unclear deposits — money coming in
+  // (amount < 0) never belongs here, even if it somehow got flagged that way.
+  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review' && Number(t.amount) > 0);
   const effectiveBudgets = computeCategoryBudgets(budgetableCategories, income);
   const hasRemainderCategory = budgetableCategories.some((c) => c.budgetType === 'remainder');
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
@@ -124,36 +127,12 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
             Paul couldn&apos;t confidently place these — not a budget line, just sort them into the
             right category below.
           </p>
-          <div className="tx-table">
-            {needsReview.map((t) => (
-              <div className={`tx-row${t.excluded ? ' tx-row-excluded' : ''}`} key={t.id}>
-                <span className="tx-date">{t.date.slice(5)}</span>
-                <span className="tx-desc">
-                  {t.description}
-                  {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
-                  {t.excluded && <span className="pill tx-excluded-pill">Ignored</span>}
-                </span>
-                <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
-                  {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
-                </span>
-                <select value={t.categoryId || ''} onChange={(e) => handleRecategorize(t.id, e.target.value)}>
-                  {budgetState.categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="tx-ignore-btn"
-                  title="Exclude this transaction from category spending totals without deleting it"
-                  onClick={() => setExcluded(t.id, !t.excluded)}
-                >
-                  {t.excluded ? 'Include' : 'Ignore'}
-                </button>
-              </div>
-            ))}
-          </div>
+          <TxList
+            transactions={needsReview}
+            categories={budgetState.categories}
+            onRecategorize={handleRecategorize}
+            onToggleExcluded={setExcluded}
+          />
         </section>
       )}
 
@@ -227,36 +206,12 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                 </button>
 
                 {isExpanded && categoryTx.length > 0 && (
-                  <div className="tx-table category-tx-table">
-                    {categoryTx.map((t) => (
-                      <div className={`tx-row${t.excluded ? ' tx-row-excluded' : ''}`} key={t.id}>
-                        <span className="tx-date">{t.date.slice(5)}</span>
-                        <span className="tx-desc">
-                          {t.description}
-                          {t.source === 'plaid' && <span className="pill tx-source-pill">Synced</span>}
-                          {t.excluded && <span className="pill tx-excluded-pill">Ignored</span>}
-                        </span>
-                        <span className={`tx-amount ${t.amount < 0 ? 'good' : ''}`}>
-                          {t.amount < 0 ? '+' : '-'}${Math.abs(Number(t.amount)).toFixed(2)}
-                        </span>
-                        <select value={t.categoryId || ''} onChange={(e) => handleRecategorize(t.id, e.target.value)}>
-                          {budgetState.categories.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="tx-ignore-btn"
-                          title="Exclude this transaction from category spending totals without deleting it"
-                          onClick={() => setExcluded(t.id, !t.excluded)}
-                        >
-                          {t.excluded ? 'Include' : 'Ignore'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <TxList
+                    transactions={categoryTx}
+                    categories={budgetState.categories}
+                    onRecategorize={handleRecategorize}
+                    onToggleExcluded={setExcluded}
+                  />
                 )}
               </div>
             );

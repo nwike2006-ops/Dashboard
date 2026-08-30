@@ -54,19 +54,15 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   // The server (see setIncomeSuggestion in supabase/functions/_shared/appState.ts)
   // computes a suggested paycheck amount from real deposits on every sync, but
   // never applies it — it just sits in suggestedPaycheckAmount until the user
-  // does something about it here. Nothing about the live budget numbers moves
-  // on its own; accepting or dismissing is always an explicit choice.
+  // clicks to accept it here. Nothing about the live budget numbers moves on
+  // its own.
   function handleAcceptIncomeSuggestion() {
     const suggested = budgetState.income?.suggestedPaycheckAmount;
     if (suggested == null) return;
     setBudgetState((prev) => ({
       ...prev,
-      income: { ...prev.income, paycheckAmount: suggested, auto: true, suggestedPaycheckAmount: null },
+      income: { ...prev.income, paycheckAmount: suggested, suggestedPaycheckAmount: null },
     }));
-  }
-
-  function handleDismissIncomeSuggestion() {
-    setBudgetState((prev) => ({ ...prev, income: { ...prev.income, suggestedPaycheckAmount: null } }));
   }
 
   async function handleRecategorize(txId, categoryId) {
@@ -95,61 +91,49 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
             </span>
           )}
         </div>
-        {budgetState.income?.auto ? (
-          <>
-            <p className="module-note">
-              Auto-detected from your paycheck deposits — average of the last few: <strong>${Number(budgetState.income.paycheckAmount).toFixed(0)}</strong> every 2 weeks.
-            </p>
-            {income > 0 && (
-              <p className="module-note">
-                ≈ ${income.toFixed(0)}/month averaged (26 paychecks a year, not exactly 24, so most months get 2 but some get 3).
-                Transfers you move around for investing (Zelle, Venmo, wires) aren't counted here.
-              </p>
+        {/* One box, always editable — no separate "auto" vs "manual" view to
+            switch between. Typing here always works, whether or not a
+            suggestion below happens to match what's typed. */}
+        <div className="income-form">
+          <label>
+            Paycheck amount
+            <input
+              type="number"
+              inputMode="decimal"
+              value={budgetState.income?.paycheckAmount ?? 0}
+              onChange={(e) => updateIncome('paycheckAmount', e.target.value)}
+            />
+          </label>
+          <label>
+            How often
+            <select value={budgetState.income?.frequency ?? 'biweekly'} onChange={(e) => updateIncome('frequency', e.target.value)}>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Once a month</option>
+            </select>
+          </label>
+        </div>
+        {income > 0 && (
+          <p className="module-note">
+            ≈ ${income.toFixed(0)}/month averaged (26 paychecks a year, not exactly 24, so most months get 2 but some get 3).
+            Transfers you move around for investing (Zelle, Venmo, wires) aren't counted here.
+          </p>
+        )}
+
+        {/* Plain, always-visible fact — the last-3-paycheck average, whatever
+            it currently is — with one button if it differs from what's set
+            above. Nothing to switch, dismiss, or click through to see it. */}
+        {budgetState.income?.suggestedPaycheckAmount != null && (
+          <p className="module-note income-suggestion-line">
+            Your last 3 real paychecks averaged <strong>${Number(budgetState.income.suggestedPaycheckAmount).toFixed(0)}</strong>.
+            {Math.abs(Number(budgetState.income.suggestedPaycheckAmount) - Number(budgetState.income.paycheckAmount)) > 0.01 && (
+              <>
+                {' '}
+                <button type="button" className="category-expand-toggle" onClick={handleAcceptIncomeSuggestion}>
+                  Use this number
+                </button>
+              </>
             )}
-            {budgetState.income?.suggestedPaycheckAmount != null &&
-              Math.abs(Number(budgetState.income.suggestedPaycheckAmount) - Number(budgetState.income.paycheckAmount)) > 0.01 && (
-                <div className="income-suggestion">
-                  <p className="module-note">
-                    Your recent paycheck deposits suggest{' '}
-                    <strong>${Number(budgetState.income.suggestedPaycheckAmount).toFixed(0)}</strong> instead of the ${Number(budgetState.income.paycheckAmount).toFixed(0)} currently
-                    set. Nothing changes until you say so.
-                  </p>
-                  <div className="income-suggestion-actions">
-                    <button type="button" className="category-expand-toggle" onClick={handleAcceptIncomeSuggestion}>
-                      Update to ${Number(budgetState.income.suggestedPaycheckAmount).toFixed(0)}
-                    </button>
-                    <button type="button" className="category-expand-toggle" onClick={handleDismissIncomeSuggestion}>
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              )}
-          </>
-        ) : (
-          <>
-            <div className="income-form">
-              <label>
-                Paycheck amount
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={budgetState.income?.paycheckAmount ?? 0}
-                  onChange={(e) => updateIncome('paycheckAmount', e.target.value)}
-                />
-              </label>
-              <label>
-                How often
-                <select value={budgetState.income?.frequency ?? 'biweekly'} onChange={(e) => updateIncome('frequency', e.target.value)}>
-                  <option value="biweekly">Every 2 weeks</option>
-                  <option value="monthly">Once a month</option>
-                </select>
-              </label>
-            </div>
-            <p className="module-note">
-              No payroll deposits detected yet — this will switch to auto-detected once a transaction with "payroll" in the
-              description syncs in.
-            </p>
-          </>
+          </p>
         )}
       </section>
 

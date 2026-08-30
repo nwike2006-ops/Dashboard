@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { todayStr } from '../lib/storage';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
+import { isPayrollDeposit } from '../lib/income';
 import TxList from '../components/TxList';
 
 function monthKey(dateStr = todayStr()) {
@@ -51,6 +52,30 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
     setBudgetState((prev) => ({ ...prev, income: { ...prev.income, [field]: value } }));
   }
 
+  // The automatic version only recalculates once a month (see setIncome in
+  // supabase/functions/_shared/appState.ts) so percent/remainder category
+  // targets don't shift mid-month. This is the deliberate bypass: pick it up
+  // right now instead of waiting for the month to turn over, for a real
+  // raise or a paycheck that's genuinely different going forward. Recomputes
+  // client-side from the same last-3-paychecks average the server uses.
+  function handleUpdateIncomeNow() {
+    const recentPayroll = transactions
+      .filter((t) => Number(t.amount) < 0 && isPayrollDeposit(t.description))
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 3);
+    if (recentPayroll.length === 0) return;
+    const avg = recentPayroll.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / recentPayroll.length;
+    setBudgetState((prev) => ({
+      ...prev,
+      income: {
+        ...prev.income,
+        paycheckAmount: Math.round(avg * 100) / 100,
+        auto: true,
+        autoUpdatedMonth: month,
+      },
+    }));
+  }
+
   async function handleRecategorize(txId, categoryId) {
     const tx = transactions.find((t) => t.id === txId);
     await recategorize(txId, categoryId);
@@ -88,6 +113,16 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                 Transfers you move around for investing (Zelle, Venmo, wires) aren't counted here.
               </p>
             )}
+            <p className="module-note">
+              This updates on its own once a month, so your budget targets stay steady in between paychecks.{' '}
+              {budgetState.income?.autoUpdatedMonth === month ? (
+                'Already updated this month.'
+              ) : (
+                <button type="button" className="category-expand-toggle" onClick={handleUpdateIncomeNow}>
+                  Update income now
+                </button>
+              )}
+            </p>
           </>
         ) : (
           <>

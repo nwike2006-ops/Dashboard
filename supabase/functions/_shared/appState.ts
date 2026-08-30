@@ -15,27 +15,26 @@ export async function setAccountBalance(supabaseAdmin, accountId, balance) {
     .upsert({ id: 'main', budget: { ...budget, accounts }, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 }
 
-// paycheckAmount here is auto-detected from real payroll deposits (see
-// isPayrollDeposit in syncTransactions.ts) — auto: true tells the Budget
-// page to show it as a detected figure rather than an editable guess.
-//
-// Locked to once per calendar month: recalculating on every paycheck (twice
-// a month) meant percent-of-income and "whatever's left" categories could
-// shift their dollar target mid-month, out from under spending the user had
-// already been tracking against. `autoUpdatedMonth` records the last month
-// this ran, so a paycheck syncing in mid-month is seen and averaged in next
-// time, but doesn't move the number again until the month turns over. The
-// "Update income now" button on the Budget page bypasses this by writing
-// income directly (see useBudgetTransactions.js) rather than calling this
-// function, which is intentional — that's the user asking for it early.
-export async function setIncome(supabaseAdmin, paycheckAmount) {
+// Suggests a paycheck amount based on real payroll deposits (any description
+// containing "payroll" — see syncTransactions.ts) — but never applies it.
+// Recalculating income automatically on every paycheck used to shift
+// percent-of-income and "whatever's left" category targets mid-month, out
+// from under spending the user had already been tracking against. Rather
+// than solve that with a lock/freeze on an automatic write, this never
+// writes `paycheckAmount` at all — it only ever updates a separate
+// `suggestedPaycheckAmount` sitting alongside it. The Budget page shows that
+// suggestion and lets the user explicitly accept or dismiss it (see
+// Budget.jsx) — nothing about their live budget numbers ever changes without
+// them clicking something. This also sidesteps needing to reason about pay
+// frequency or "what counts as this month" at all: a suggestion sitting
+// unapplied is harmless no matter when it was computed.
+export async function setIncomeSuggestion(supabaseAdmin, suggestedPaycheckAmount) {
   const budget = await loadBudget(supabaseAdmin);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  if (budget.income?.autoUpdatedMonth === currentMonth) return;
+  if (budget.income?.suggestedPaycheckAmount === suggestedPaycheckAmount) return; // no-op, avoid a pointless write
   await supabaseAdmin.from('app_state').upsert(
     {
       id: 'main',
-      budget: { ...budget, income: { paycheckAmount, frequency: 'biweekly', auto: true, autoUpdatedMonth: currentMonth } },
+      budget: { ...budget, income: { ...budget.income, suggestedPaycheckAmount } },
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' }

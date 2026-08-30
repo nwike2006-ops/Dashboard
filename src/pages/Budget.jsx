@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { todayStr } from '../lib/storage';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
-import { isPayrollDeposit } from '../lib/income';
 import TxList from '../components/TxList';
 
 function monthKey(dateStr = todayStr()) {
@@ -52,28 +51,22 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
     setBudgetState((prev) => ({ ...prev, income: { ...prev.income, [field]: value } }));
   }
 
-  // The automatic version only recalculates once a month (see setIncome in
-  // supabase/functions/_shared/appState.ts) so percent/remainder category
-  // targets don't shift mid-month. This is the deliberate bypass: pick it up
-  // right now instead of waiting for the month to turn over, for a real
-  // raise or a paycheck that's genuinely different going forward. Recomputes
-  // client-side from the same last-3-paychecks average the server uses.
-  function handleUpdateIncomeNow() {
-    const recentPayroll = transactions
-      .filter((t) => Number(t.amount) < 0 && isPayrollDeposit(t.description))
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 3);
-    if (recentPayroll.length === 0) return;
-    const avg = recentPayroll.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / recentPayroll.length;
+  // The server (see setIncomeSuggestion in supabase/functions/_shared/appState.ts)
+  // computes a suggested paycheck amount from real deposits on every sync, but
+  // never applies it — it just sits in suggestedPaycheckAmount until the user
+  // does something about it here. Nothing about the live budget numbers moves
+  // on its own; accepting or dismissing is always an explicit choice.
+  function handleAcceptIncomeSuggestion() {
+    const suggested = budgetState.income?.suggestedPaycheckAmount;
+    if (suggested == null) return;
     setBudgetState((prev) => ({
       ...prev,
-      income: {
-        ...prev.income,
-        paycheckAmount: Math.round(avg * 100) / 100,
-        auto: true,
-        autoUpdatedMonth: month,
-      },
+      income: { ...prev.income, paycheckAmount: suggested, auto: true, suggestedPaycheckAmount: null },
     }));
+  }
+
+  function handleDismissIncomeSuggestion() {
+    setBudgetState((prev) => ({ ...prev, income: { ...prev.income, suggestedPaycheckAmount: null } }));
   }
 
   async function handleRecategorize(txId, categoryId) {
@@ -113,16 +106,24 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                 Transfers you move around for investing (Zelle, Venmo, wires) aren't counted here.
               </p>
             )}
-            <p className="module-note">
-              This updates on its own once a month, so your budget targets stay steady in between paychecks.{' '}
-              {budgetState.income?.autoUpdatedMonth === month ? (
-                'Already updated this month.'
-              ) : (
-                <button type="button" className="category-expand-toggle" onClick={handleUpdateIncomeNow}>
-                  Update income now
-                </button>
+            {budgetState.income?.suggestedPaycheckAmount != null &&
+              Math.abs(Number(budgetState.income.suggestedPaycheckAmount) - Number(budgetState.income.paycheckAmount)) > 0.01 && (
+                <div className="income-suggestion">
+                  <p className="module-note">
+                    Your recent paycheck deposits suggest{' '}
+                    <strong>${Number(budgetState.income.suggestedPaycheckAmount).toFixed(0)}</strong> instead of the ${Number(budgetState.income.paycheckAmount).toFixed(0)} currently
+                    set. Nothing changes until you say so.
+                  </p>
+                  <div className="income-suggestion-actions">
+                    <button type="button" className="category-expand-toggle" onClick={handleAcceptIncomeSuggestion}>
+                      Update to ${Number(budgetState.income.suggestedPaycheckAmount).toFixed(0)}
+                    </button>
+                    <button type="button" className="category-expand-toggle" onClick={handleDismissIncomeSuggestion}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
               )}
-            </p>
           </>
         ) : (
           <>

@@ -742,6 +742,20 @@ textarea {
   cursor: pointer;
 }
 
+.income-suggestion {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+}
+
+.income-suggestion-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+}
+
 .category-expand-toggle:disabled {
   color: var(--text);
   opacity: 0.5;

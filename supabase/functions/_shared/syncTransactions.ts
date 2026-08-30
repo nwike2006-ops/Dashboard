@@ -1,13 +1,5 @@
 import { plaidClient } from './plaidClient.ts';
-import { setAccountBalance, setPlaidStatus, setIncome } from './appState.ts';
-
-// Real paycheck deposits, as opposed to Zelle/Venmo/wire transfers the user
-// moves around for investing — only these should drive the budget's income
-// figure. Broad on purpose: any employer's ACH payroll descriptor contains
-// "payroll" somewhere in it.
-function isPayrollDeposit(description) {
-  return /payroll/i.test(description);
-}
+import { setAccountBalance, setPlaidStatus, setIncomeSuggestion } from './appState.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
@@ -203,26 +195,30 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
       console.error('Failed to sync balance:', err?.response?.data ?? err?.message ?? err);
     }
 
-    const sawNewPayroll = [...added, ...modified].some((txn) => isPayrollDeposit(txn.merchant_name || txn.name || ''));
-    if (sawNewPayroll) {
-      try {
-        // Average the last few real deposits rather than just the latest one —
-        // paycheck amounts vary (overtime, PTO, etc.), so one paycheck alone is
-        // a noisy basis for a monthly budget.
-        const { data: recentPayroll } = await supabaseAdmin
-          .from('budget_transactions')
-          .select('amount')
-          .ilike('description', '%payroll%')
-          .lt('amount', 0)
-          .order('date', { ascending: false })
-          .limit(3);
-        if (recentPayroll && recentPayroll.length > 0) {
-          const avg = recentPayroll.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / recentPayroll.length;
-          await setIncome(supabaseAdmin, Math.round(avg * 100) / 100);
-        }
-      } catch (err) {
-        console.error('Failed to update income from payroll:', err?.message ?? err);
+    // Runs on every sync, not just ones with a new payroll deposit — cheap to
+    // attempt, and setIncomeSuggestion no-ops if nothing's actually changed.
+    try {
+      // Always the true latest 3 real deposits — there's no need to freeze
+      // or exclude the current month here, since this only ever updates a
+      // *suggestion* sitting alongside the live income figure (see
+      // setIncomeSuggestion). It never touches what the budget actually
+      // uses; the user has to explicitly accept it on the Budget page for
+      // anything to change, so there's nothing to protect against by timing
+      // this carefully — the freshest available suggestion is the most
+      // useful one to show them, whenever they get around to looking at it.
+      const { data: recentPayroll } = await supabaseAdmin
+        .from('budget_transactions')
+        .select('amount')
+        .ilike('description', '%payroll%')
+        .lt('amount', 0)
+        .order('date', { ascending: false })
+        .limit(3);
+      if (recentPayroll && recentPayroll.length > 0) {
+        const avg = recentPayroll.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / recentPayroll.length;
+        await setIncomeSuggestion(supabaseAdmin, Math.round(avg * 100) / 100);
       }
+    } catch (err) {
+      console.error('Failed to update income from payroll:', err?.message ?? err);
     }
 
     await setPlaidStatus(supabaseAdmin, itemRowId, { linked: true, lastSyncedAt: new Date().toISOString() });

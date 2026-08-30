@@ -96,7 +96,7 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
             suggestion below happens to match what's typed. */}
         <div className="income-form">
           <label>
-            Paycheck amount
+            {budgetState.income?.frequency === 'irregular' ? 'Roughly, per month' : 'Paycheck amount'}
             <input
               type="number"
               inputMode="decimal"
@@ -107,14 +107,22 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
           <label>
             How often
             <select value={budgetState.income?.frequency ?? 'biweekly'} onChange={(e) => updateIncome('frequency', e.target.value)}>
+              <option value="weekly">Every week</option>
               <option value="biweekly">Every 2 weeks</option>
+              <option value="semimonthly">Twice a month (e.g. 1st &amp; 15th)</option>
               <option value="monthly">Once a month</option>
+              <option value="irregular">Irregular / varies</option>
             </select>
           </label>
         </div>
         {income > 0 && (
           <p className="module-note">
-            ≈ ${income.toFixed(0)}/month averaged (26 paychecks a year, not exactly 24, so most months get 2 but some get 3).
+            {budgetState.income?.frequency === 'weekly' &&
+              `≈ $${income.toFixed(0)}/month averaged (52 paychecks a year, not exactly 48, so most months get 4 but some get 5). `}
+            {budgetState.income?.frequency === 'biweekly' &&
+              `≈ $${income.toFixed(0)}/month averaged (26 paychecks a year, not exactly 24, so most months get 2 but some get 3). `}
+            {budgetState.income?.frequency === 'semimonthly' && `$${income.toFixed(0)}/month (exactly 2 paychecks, every month). `}
+            {budgetState.income?.frequency === 'irregular' && `Using $${income.toFixed(0)}/month, as entered. `}
             Transfers you move around for investing (Zelle, Venmo, wires) aren't counted here.
           </p>
         )}

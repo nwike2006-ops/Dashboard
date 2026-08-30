@@ -1,9 +1,25 @@
-// Biweekly (every 2 weeks) pays out 26 times a year, not 24 — so most months
-// get 2 paychecks but a couple get 3. Averaging over the full year (26/12)
-// gives a steadier monthly figure than just multiplying by 2.
+// How many times a year each frequency actually pays out — the basis for
+// converting one paycheck into a monthly figure. Weekly (52) and biweekly
+// (26) don't divide evenly into 12 months, so most months get one count but
+// a few get an extra paycheck; averaging over the full year (× n/12) gives a
+// steady monthly figure instead of the number jumping around based on which
+// type of month it happens to be. Semi-monthly (24, always the 1st/15th or
+// similar fixed dates) and monthly (12) already divide evenly, so for those
+// the "average" is just the plain multiplication — no smoothing needed.
+const PAYCHECKS_PER_YEAR = {
+  weekly: 52,
+  biweekly: 26,
+  semimonthly: 24,
+  monthly: 12,
+};
+
 export function monthlyIncome(income) {
   const amount = Number(income?.paycheckAmount || 0);
-  return income?.frequency === 'biweekly' ? amount * (26 / 12) : amount;
+  const frequency = income?.frequency;
+  // Irregular/freelance income has no fixed paycheck size or schedule to
+  // convert — the amount entered *is* the monthly figure, typed directly.
+  if (frequency === 'irregular' || !PAYCHECKS_PER_YEAR[frequency]) return amount;
+  return amount * (PAYCHECKS_PER_YEAR[frequency] / 12);
 }
 
 // Turns each category's budgetType/budgetValue into an actual dollar amount

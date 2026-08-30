@@ -26,5 +26,5 @@ export const DEFAULT_CATEGORIES = [
 // used to show how much of your pay is left after budgeted categories.
 export const DEFAULT_INCOME = {
   paycheckAmount: 0,
-  frequency: 'biweekly', // 'biweekly' | 'monthly'
+  frequency: 'biweekly', // 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular'
 };

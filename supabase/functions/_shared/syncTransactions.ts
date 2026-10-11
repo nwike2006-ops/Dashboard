@@ -105,6 +105,21 @@ function isCreditCardPayment(txn) {
   return /payment\s*thank\s*you|payment to .*card/i.test(description);
 }
 
+// Mirrors REFUND_PATTERNS in src/lib/spending.js — kept in sync manually
+// since Edge Functions (Deno) can't share a module with the Vite frontend.
+// Negative amounts are money coming IN: a paycheck, a P2P transfer, interest,
+// or a refund of an earlier purchase. Only the last kind is real spending
+// history worth a category (so it nets back against what it refunded) — a
+// paycheck or transfer isn't "spending" in any category and was previously
+// falling through mapCategory's chain to the 'personal' catch-all by
+// accident, which is wrong: it should stay uncategorized (see TxList.jsx's
+// "Uncategorized (income)" treatment of a null categoryId).
+const KNOWN_REFUND_PATTERNS = [/whoop/i, /marshalls/i, /charles\b[\s\S]*?\bhenry\b/i];
+
+function isKnownRefund(description) {
+  return KNOWN_REFUND_PATTERNS.some((pattern) => pattern.test(description || ''));
+}
+
 function mapCategory(txn, merchantMemory) {
   const description = (txn.merchant_name || txn.name || '').trim();
   const remembered = merchantMemory[description.toLowerCase()];
@@ -201,13 +216,20 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
 
     for (const txn of [...added, ...modified]) {
       if (!accountIds.has(txn.account_id)) continue; // belongs to a different account on this same Item
+      const description = txn.merchant_name || txn.name;
+      const isIncoming = Number(txn.amount) < 0;
+      const categoryId = isCreditCardPayment(txn)
+        ? null
+        : isIncoming && !isKnownRefund(description)
+        ? null // a paycheck/transfer/interest deposit, not spending — leave uncategorized
+        : mapCategory(txn, merchantMemory);
       const { error } = await supabaseAdmin.from('budget_transactions').upsert(
         {
           plaid_transaction_id: txn.transaction_id,
           date: txn.date,
-          description: txn.merchant_name || txn.name,
+          description,
           amount: txn.amount, // Plaid: positive = money out, matches this app's convention
-          category_id: isCreditCardPayment(txn) ? null : mapCategory(txn, merchantMemory),
+          category_id: categoryId,
           account_id: item.account_id,
           source: 'plaid',
           excluded: isCreditCardPayment(txn),

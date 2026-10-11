@@ -8,6 +8,17 @@ export function todayLabel() {
   return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+// How far into the current calendar month today is — the budget period
+// this app tracks against (see Budget.jsx's month nav). daysLeft counts
+// today itself as still "left" (last day of the month = 1 day left, not 0),
+// since spending can still happen today.
+export function monthProgress() {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth = now.getDate();
+  return { daysInMonth, dayOfMonth, daysLeft: daysInMonth - dayOfMonth + 1 };
+}
+
 export function daysBetween(aStr, bStr) {
   const a = new Date(aStr + 'T00:00:00');
   const b = new Date(bStr + 'T00:00:00');

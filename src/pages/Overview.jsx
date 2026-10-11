@@ -1,6 +1,6 @@
 import BarChart from '../components/BarChart';
 import { PlusIcon, BudgetIcon, AccountsIcon, ArrowUpRightIcon } from '../components/icons';
-import { todayStr, todayLabel } from '../lib/storage';
+import { todayStr, todayLabel, monthProgress } from '../lib/storage';
 import { isPayrollDeposit } from '../lib/income';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets, netWorth } from '../lib/budgetMath';
@@ -49,10 +49,15 @@ export default function Overview({ budgetState, transactions, setView }) {
   });
 
   const recent = transactions.slice(0, 5);
+  const { daysLeft, daysInMonth } = monthProgress();
+  const monthName = new Date().toLocaleDateString(undefined, { month: 'long' });
 
   return (
     <>
       <h1 className="page-title">Welcome!</h1>
+      <p className="month-progress-note">
+        <strong>{daysLeft}</strong> day{daysLeft === 1 ? '' : 's'} left in {monthName} ({daysInMonth - daysLeft} of {daysInMonth} days gone)
+      </p>
 
       <div className="overview-grid">
         <section className="card">

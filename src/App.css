@@ -214,6 +214,13 @@
   margin: 0 0 20px;
 }
 
+.month-progress-note {
+  margin: -12px 0 20px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.75;
+}
+
 /* ---------- Cards ---------- */
 
 .card {

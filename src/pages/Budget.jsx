@@ -8,8 +8,25 @@ function monthKey(dateStr = todayStr()) {
   return dateStr.slice(0, 7);
 }
 
+function shiftMonthKey(key, delta) {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(key) {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
 export default function Budget({ budgetState, setBudgetState, transactions, recategorize, setExcluded }) {
   const [expandedCategories, setExpandedCategories] = useState(() => new Set());
+  const currentMonth = monthKey();
+  // Lets the user page back through past months to see that month's actual
+  // spending and what was flagged Needs Review then — budgets themselves
+  // aren't month-specific (same categories/targets every month), only the
+  // spending/review data shown below changes with this.
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   function toggleCategory(categoryId) {
     setExpandedCategories((prev) => {
@@ -23,8 +40,7 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
     });
   }
 
-  const month = monthKey();
-  const monthTx = transactions.filter((t) => monthKey(t.date) === month);
+  const monthTx = transactions.filter((t) => monthKey(t.date) === selectedMonth);
   const spentByCategory = netSpentByCategory(monthTx);
 
   const income = monthlyIncome(budgetState.income);
@@ -32,8 +48,10 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   // dollar target for — so it's excluded from the budget-bar list and shown separately.
   const budgetableCategories = budgetState.categories.filter((c) => c.id !== 'needs-review');
   // Needs Review is for unclear spending, not unclear deposits — money coming in
-  // (amount < 0) never belongs here, even if it somehow got flagged that way.
-  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review' && Number(t.amount) > 0);
+  // (amount < 0) never belongs here, even if it somehow got flagged that way. Scoped
+  // to the selected month so old flagged items from past months don't pile up here
+  // forever — paging back via the month nav below still surfaces them.
+  const needsReview = monthTx.filter((t) => t.categoryId === 'needs-review' && Number(t.amount) > 0);
   const effectiveBudgets = computeCategoryBudgets(budgetableCategories, income);
   const hasRemainderCategory = budgetableCategories.some((c) => c.budgetType === 'remainder');
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
@@ -77,6 +95,32 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   return (
     <>
       <h1 className="page-title">Budget</h1>
+
+      <div className="month-nav">
+        <button
+          type="button"
+          className="month-nav-btn"
+          onClick={() => setSelectedMonth((m) => shiftMonthKey(m, -1))}
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <span className="month-nav-label">{selectedMonth === currentMonth ? 'This month' : monthLabel(selectedMonth)}</span>
+        <button
+          type="button"
+          className="month-nav-btn"
+          onClick={() => setSelectedMonth((m) => shiftMonthKey(m, 1))}
+          disabled={selectedMonth === currentMonth}
+          aria-label="Next month"
+        >
+          ›
+        </button>
+        {selectedMonth !== currentMonth && (
+          <button type="button" className="category-expand-toggle month-nav-today" onClick={() => setSelectedMonth(currentMonth)}>
+            Back to this month
+          </button>
+        )}
+      </div>
 
       <section className="card">
         <div className="card-header">
@@ -167,7 +211,11 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
       <section className="card">
         <div className="card-header">
           <h2>Category budgets</h2>
-          <span className="pill">{totalBudgeted > 0 ? `$${totalSpent.toFixed(0)} of $${totalBudgeted.toFixed(0)} this month` : 'Set budgets below to get started'}</span>
+          <span className="pill">
+            {totalBudgeted > 0
+              ? `$${totalSpent.toFixed(0)} of $${totalBudgeted.toFixed(0)} ${selectedMonth === currentMonth ? 'this month' : `in ${monthLabel(selectedMonth)}`}`
+              : 'Set budgets below to get started'}
+          </span>
         </div>
         <div className="category-bars">
           {budgetableCategories.map((c) => {

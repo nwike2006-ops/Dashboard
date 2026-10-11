@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useInvestmentHoldings } from '../lib/useInvestmentHoldings';
 import PlaidConnectButton from '../components/PlaidConnectButton';
+import { netWorth } from '../lib/budgetMath';
 
 function timeAgo(isoString) {
   if (!isoString) return null;
@@ -82,7 +83,7 @@ function HoldingsCard({ linked }) {
   );
 }
 
-export default function Accounts({ budgetState, setBudgetState, chasePlaid, schwabPlaid, marcusPlaid }) {
+export default function Accounts({ budgetState, setBudgetState, chasePlaid, schwabPlaid, marcusPlaid, creditCardPlaid }) {
   function updateBalance(accountId, value) {
     setBudgetState((prev) => ({
       ...prev,
@@ -90,7 +91,7 @@ export default function Accounts({ budgetState, setBudgetState, chasePlaid, schw
     }));
   }
 
-  const total = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  const total = netWorth(budgetState.accounts);
 
   return (
     <>
@@ -100,6 +101,7 @@ export default function Accounts({ budgetState, setBudgetState, chasePlaid, schw
       <BankConnectionCard title="Schwab" target="schwab" plaid={schwabPlaid} />
       <HoldingsCard linked={schwabPlaid.linked} />
       <BankConnectionCard title="Marcus by Goldman Sachs" target="marcus" plaid={marcusPlaid} />
+      <BankConnectionCard title="Credit Card" target="creditCard" plaid={creditCardPlaid} />
 
       <section className="card">
         <div className="card-header">

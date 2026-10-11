@@ -3,7 +3,7 @@ import { PlusIcon, BudgetIcon, AccountsIcon, ArrowUpRightIcon } from '../compone
 import { todayStr, todayLabel } from '../lib/storage';
 import { isPayrollDeposit } from '../lib/income';
 import { netSpentByCategory } from '../lib/spending';
-import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
+import { monthlyIncome, computeCategoryBudgets, netWorth } from '../lib/budgetMath';
 
 function monthKey(dateStr) {
   return dateStr.slice(0, 7);
@@ -35,7 +35,7 @@ export default function Overview({ budgetState, transactions, setView }) {
   const totalSpent = Object.values(netSpentByCategory(monthTx)).reduce((a, b) => a + b, 0);
   const remaining = totalBudgeted - totalSpent;
 
-  const totalBalance = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  const totalBalance = netWorth(budgetState.accounts);
 
   const chartMonths = lastNMonths(6);
   const chartData = chartMonths.map((key) => {

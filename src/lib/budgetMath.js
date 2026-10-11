@@ -26,6 +26,16 @@ export function monthlyIncome(income) {
 // for the month: 'fixed' is as-typed, 'percent' is a share of income, and
 // 'remainder' splits whatever's left of income after every fixed/percent
 // category is accounted for (evenly, if more than one category uses it).
+// Sums accounts into one net-worth figure: checking/savings/investing add,
+// but a 'credit' account's balance is what's owed — a liability, not an
+// asset — so it subtracts instead.
+export function netWorth(accounts) {
+  return accounts.reduce((sum, a) => {
+    const balance = Number(a.balance || 0);
+    return sum + (a.type === 'credit' ? -balance : balance);
+  }, 0);
+}
+
 export function computeCategoryBudgets(categories, income) {
   const remainderCategories = categories.filter((c) => c.budgetType === 'remainder');
   const allocated = categories

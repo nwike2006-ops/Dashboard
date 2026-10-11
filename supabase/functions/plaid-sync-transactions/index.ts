@@ -11,11 +11,19 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const { target } = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const { target, resetCursor } = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // resetCursor forces a full re-pull from Plaid instead of the usual
+    // incremental sync — useful after fixing a sync bug retroactively, where
+    // the cursor's already past the bad data and an incremental sync would
+    // see nothing new to re-process.
+    if (resetCursor && target) {
+      await supabaseAdmin.from('plaid_items').update({ sync_cursor: null }).eq('id', target);
+    }
 
     let query = supabaseAdmin.from('plaid_items').select('id, account_type');
     if (target) query = query.eq('id', target);

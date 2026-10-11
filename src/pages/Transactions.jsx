@@ -6,11 +6,20 @@ function normalize(desc) {
   return desc.trim().toLowerCase();
 }
 
+function monthKey(dateStr) {
+  return dateStr.slice(0, 7);
+}
+
 export default function Transactions({ budgetState, setBudgetState, transactions, addTransaction, recategorize, setExcluded }) {
   // Needs Review is for unclear spending, not unclear deposits — money coming
   // in (amount < 0, the reverse of "positive = expense") never belongs here,
-  // even if it somehow got flagged that way.
-  const needsReview = transactions.filter((t) => t.categoryId === 'needs-review' && Number(t.amount) > 0);
+  // even if it somehow got flagged that way. Scoped to the current month so
+  // old flagged items don't pile up here forever — past months' flagged
+  // items are still reachable via the month history nav on the Budget page.
+  const currentMonth = monthKey(todayStr());
+  const needsReview = transactions.filter(
+    (t) => t.categoryId === 'needs-review' && Number(t.amount) > 0 && monthKey(t.date) === currentMonth
+  );
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -99,7 +108,8 @@ export default function Transactions({ budgetState, setBudgetState, transactions
             <span className="pill">{needsReview.length} flagged</span>
           </div>
           <p className="module-note">
-            Paul couldn&apos;t confidently place these — take a look and pick the right category.
+            Paul couldn&apos;t confidently place these — take a look and pick the right category. Older flagged
+            items from past months are on the Budget page&apos;s month history.
           </p>
           <TxList
             transactions={needsReview}

@@ -1,5 +1,6 @@
 import { plaidClient } from './plaidClient.ts';
 import { setAccountBalance, setPlaidStatus, setIncomeSuggestion } from './appState.ts';
+import { targetConfig } from './plaidTargets.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
 // app's budget category ids (see src/data/budgetDefaults.js — keep in sync
@@ -32,8 +33,6 @@ const PLAID_CATEGORY_MAP = {
   GENERAL_SERVICES_INSURANCE: 'insurance',
   ENTERTAINMENT: 'personal',
   GENERAL_SERVICES_SUBSCRIPTION: 'subscriptions',
-  LOAN_PAYMENTS: 'debt',
-  LOAN_PAYMENTS_CREDIT_CARD_PAYMENT: 'debt',
   TRANSFER_OUT: 'savings-goal',
   TRANSFER_OUT_SAVINGS: 'savings-goal',
   TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS: 'savings-goal',
@@ -61,6 +60,10 @@ const PLAID_CATEGORY_MAP = {
 // here rather than trusting Plaid's category.
 const OVERRIDE_RULES = [
   { pattern: /charles\b[\s\S]*?\bhenry\b/i, category: 'housing' },
+  // New roommate arrangement (no landlord anymore) — rent now goes to
+  // Elijah Booth instead of Charles Henry, same Zelle-dynamic-reference-id
+  // problem as that rule, so same flexible-gap pattern.
+  { pattern: /elijah\b[\s\S]*?\bbooth\b/i, category: 'housing' },
   { pattern: /doordash|grubhub|uber\s*eats|postmates/i, category: 'personal' },
 ];
 
@@ -85,6 +88,23 @@ const KEYWORD_RULES = [
 // OVERRIDE_RULES (known payee/pattern) beats Plaid's own category (accurate
 // for most retail but useless for P2P transfers) beats KEYWORD_RULES
 // (last-resort substring guesses) beats 'personal' as the final catch-all.
+// Paying off a credit card is money moving between the user's own accounts,
+// not new spending — Plaid tags both legs of the transfer (the checking
+// withdrawal and the card's payment-received) with this same detailed
+// category, so checking it once here handles both sides symmetrically.
+// Real purchases on the card keep flowing through mapCategory untouched.
+// Checking's side of the payment reliably gets Plaid's
+// LOAN_PAYMENTS_CREDIT_CARD_PAYMENT detailed category. The card's own
+// payment-received leg doesn't (observed landing as a generic fallback
+// instead), so this also matches on the description the card issuer prints
+// for its own payment-received line (e.g. "Payment Thank You-Mobile",
+// "Payment to Chase card ending in ####") to catch both sides reliably.
+function isCreditCardPayment(txn) {
+  if (txn.personal_finance_category?.detailed === 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT') return true;
+  const description = (txn.merchant_name || txn.name || '').trim();
+  return /payment\s*thank\s*you|payment to .*card/i.test(description);
+}
+
 function mapCategory(txn, merchantMemory) {
   const description = (txn.merchant_name || txn.name || '').trim();
   const remembered = merchantMemory[description.toLowerCase()];
@@ -104,13 +124,28 @@ function mapCategory(txn, merchantMemory) {
   return 'personal';
 }
 
-// A depository item's transactions all get lumped under its one configured
-// account_id (see plaidTargets.ts), so its balance follows the same
-// simplification: sum whatever Plaid returns across every account on the
-// linked Item into that one figure, rather than modeling each sub-account.
-async function syncBalance(supabaseAdmin, item) {
+// A Plaid Item can expose more than one underlying account (e.g. the same
+// Chase login carries both a checking account and a credit card) — if the
+// user grants access to more than this target's one intended account during
+// Link, every account comes back from Plaid's API regardless. This matches
+// Plaid's own per-account `type` field against the target's configured
+// plaidType (see plaidTargets.ts) so a sync only ever touches the one
+// account it's meant to, instead of lumping everything under one accountId.
+async function matchingAccountIds(item) {
+  const { data } = await plaidClient.accountsGet({ access_token: item.access_token });
+  const expectedType = targetConfig(item.id).plaidType;
+  return new Set(data.accounts.filter((a) => a.type === expectedType).map((a) => a.account_id));
+}
+
+async function syncBalance(supabaseAdmin, item, accountIds) {
   const { data } = await plaidClient.accountsBalanceGet({ access_token: item.access_token });
-  const total = data.accounts.reduce((sum, a) => sum + (a.balances.available ?? a.balances.current ?? 0), 0);
+  // A credit card's "available" balance is remaining credit limit, not
+  // amount owed — using available-first here would show the wrong number
+  // entirely, so credit accounts read `current` (what's owed) directly.
+  const isCredit = targetConfig(item.id).plaidType === 'credit';
+  const total = data.accounts
+    .filter((a) => accountIds.has(a.account_id))
+    .reduce((sum, a) => sum + (isCredit ? a.balances.current ?? 0 : a.balances.available ?? a.balances.current ?? 0), 0);
   await setAccountBalance(supabaseAdmin, item.account_id, total);
 }
 
@@ -144,6 +179,7 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
   try {
     const { data: stateRow } = await supabaseAdmin.from('app_state').select('budget').eq('id', 'main').maybeSingle();
     const merchantMemory = stateRow?.budget?.merchantMemory || {};
+    const accountIds = await matchingAccountIds(item);
 
     let cursor = item.sync_cursor;
     const added = [];
@@ -164,15 +200,17 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
     }
 
     for (const txn of [...added, ...modified]) {
+      if (!accountIds.has(txn.account_id)) continue; // belongs to a different account on this same Item
       const { error } = await supabaseAdmin.from('budget_transactions').upsert(
         {
           plaid_transaction_id: txn.transaction_id,
           date: txn.date,
           description: txn.merchant_name || txn.name,
           amount: txn.amount, // Plaid: positive = money out, matches this app's convention
-          category_id: mapCategory(txn, merchantMemory),
+          category_id: isCreditCardPayment(txn) ? null : mapCategory(txn, merchantMemory),
           account_id: item.account_id,
           source: 'plaid',
+          excluded: isCreditCardPayment(txn),
         },
         { onConflict: 'plaid_transaction_id' }
       );
@@ -190,7 +228,7 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
     await supabaseAdmin.from('plaid_items').update({ sync_cursor: cursor }).eq('id', itemRowId);
 
     try {
-      await syncBalance(supabaseAdmin, item);
+      await syncBalance(supabaseAdmin, item, accountIds);
     } catch (err) {
       console.error('Failed to sync balance:', err?.response?.data ?? err?.message ?? err);
     }

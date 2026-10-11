@@ -9,6 +9,7 @@ import Accounts from './pages/Accounts';
 import { useBudgetState } from './lib/useBudgetState';
 import { useBudgetTransactions } from './lib/useBudgetTransactions';
 import { usePlaidStatus } from './lib/usePlaidStatus';
+import { netWorth } from './lib/budgetMath';
 
 function App() {
   const [view, setView] = useState('overview');
@@ -17,12 +18,13 @@ function App() {
   const chasePlaid = usePlaidStatus('chase');
   const schwabPlaid = usePlaidStatus('schwab');
   const marcusPlaid = usePlaidStatus('marcus');
+  const creditCardPlaid = usePlaidStatus('creditCard');
 
   if (budgetLoading) {
     return <div className="loading-screen">Loading your budget…</div>;
   }
 
-  const totalBalance = budgetState.accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  const totalBalance = netWorth(budgetState.accounts);
 
   return (
     <div className="app-shell">
@@ -59,6 +61,7 @@ function App() {
               chasePlaid={chasePlaid}
               schwabPlaid={schwabPlaid}
               marcusPlaid={marcusPlaid}
+              creditCardPlaid={creditCardPlaid}
             />
           )}
         </main>

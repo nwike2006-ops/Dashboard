@@ -752,6 +752,41 @@ textarea {
   cursor: default;
 }
 
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -4px 0 16px;
+}
+
+.month-nav-btn {
+  background: var(--card, #fff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.month-nav-label {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 110px;
+  text-align: center;
+}
+
+.month-nav-today {
+  font-size: 12px;
+}
+
 .category-tx-table {
   margin-top: 4px;
   padding-top: 8px;

@@ -204,6 +204,7 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
             categories={budgetState.categories}
             onRecategorize={handleRecategorize}
             onToggleExcluded={setExcluded}
+            merchantInfo={budgetState.merchantInfo}
           />
         </section>
       )}
@@ -287,6 +288,7 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                     categories={budgetState.categories}
                     onRecategorize={handleRecategorize}
                     onToggleExcluded={setExcluded}
+                    merchantInfo={budgetState.merchantInfo}
                   />
                 )}
               </div>

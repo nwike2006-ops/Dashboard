@@ -11,6 +11,11 @@ function rowToTx(row) {
     accountId: row.account_id,
     source: row.source,
     excluded: row.excluded,
+    // Plaid-sourced context (merchant location, Plaid's own category guess,
+    // payment channel, website) for disambiguating a cryptic description —
+    // read-only, populated only by the sync, never user-edited. Absent (null)
+    // for manual entries.
+    details: row.details,
   };
 }
 

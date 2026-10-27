@@ -38,6 +38,10 @@ create table if not exists budget_transactions (
   account_id text not null default 'chase-checking',
   plaid_transaction_id text unique,
   source text not null default 'manual', -- 'manual' | 'plaid'
+  -- Plaid-sourced context (location, Plaid's own category guess, payment
+  -- channel, website) for disambiguating a cryptic description — populated
+  -- only by the sync, null for manual entries.
+  details jsonb,
   -- User-controlled: excludes this transaction from category spending totals
   -- without deleting it, for cases like a canceled subscription's last charge
   -- that shouldn't keep counting against the budget. Manual, not auto-detected

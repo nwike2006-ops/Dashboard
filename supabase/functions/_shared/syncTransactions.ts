@@ -99,6 +99,34 @@ const KEYWORD_RULES = [
 // instead), so this also matches on the description the card issuer prints
 // for its own payment-received line (e.g. "Payment Thank You-Mobile",
 // "Payment to Chase card ending in ####") to catch both sides reliably.
+// Turns Plaid's own per-transaction context into something worth showing
+// the user when a merchant description is unrecognizable — where it was
+// bought, what Plaid itself thinks the purchase was, and how it was paid.
+// Returns null (not an empty object) when nothing's actually available, so
+// the frontend can skip rendering a details toggle entirely.
+function buildDetails(txn) {
+  const loc = txn.location || {};
+  const locationParts = [loc.address, loc.city, loc.region].filter(Boolean);
+  const location = locationParts.length > 0 ? locationParts.join(', ') : null;
+
+  const rawCategory = txn.personal_finance_category?.detailed;
+  const category = rawCategory
+    ? rawCategory
+        .toLowerCase()
+        .replace(/_/g, ' ')
+        .replace(/^./, (c) => c.toUpperCase())
+    : null;
+
+  const paymentChannel = txn.payment_channel
+    ? txn.payment_channel.replace(/^./, (c) => c.toUpperCase())
+    : null;
+
+  const website = txn.website || null;
+
+  const details = { location, category, paymentChannel, website };
+  return Object.values(details).some(Boolean) ? details : null;
+}
+
 function isCreditCardPayment(txn) {
   if (txn.personal_finance_category?.detailed === 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT') return true;
   const description = (txn.merchant_name || txn.name || '').trim();
@@ -233,6 +261,7 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
           account_id: item.account_id,
           source: 'plaid',
           excluded: isCreditCardPayment(txn),
+          details: buildDetails(txn),
         },
         { onConflict: 'plaid_transaction_id' }
       );

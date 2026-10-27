@@ -6,6 +6,7 @@ const DEFAULT_STATE = {
   categories: DEFAULT_CATEGORIES,
   income: DEFAULT_INCOME,
   merchantMemory: {}, // { normalizedDescription: categoryId } — learned from past corrections
+  merchantInfo: {}, // { normalizedDescription: "what this company actually is" } — identifies cryptic merchant names
 };
 
 export function useBudgetState() {

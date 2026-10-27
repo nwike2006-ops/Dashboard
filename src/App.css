@@ -585,8 +585,51 @@ textarea {
 
 .tx-desc {
   flex: 1;
-  min-width: 100px;
+  min-width: 140px;
   color: var(--text-h);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tx-desc-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tx-details-toggle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent, var(--text-h));
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.tx-details-panel {
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tx-details-row {
+  display: flex;
+  gap: 6px;
+}
+
+.tx-details-label {
+  opacity: 0.6;
+  min-width: 90px;
+  flex-shrink: 0;
 }
 
 .tx-amount {

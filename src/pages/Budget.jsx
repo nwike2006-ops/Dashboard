@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { todayStr } from '../lib/storage';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets } from '../lib/budgetMath';
@@ -19,7 +19,7 @@ function monthLabel(key) {
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-export default function Budget({ budgetState, setBudgetState, transactions, recategorize, setExcluded }) {
+export default function Budget({ budgetState, setBudgetState, transactions, recategorize, setExcluded, addTransaction }) {
   const [expandedCategories, setExpandedCategories] = useState(() => new Set());
   const currentMonth = monthKey();
   // Lets the user page back through past months to see that month's actual
@@ -57,6 +57,48 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
   const totalSpent = Object.values(spentByCategory).reduce((a, b) => a + b, 0);
   const leftToBudget = income - totalBudgeted;
+
+  // Only meaningful for a month that's actually over — mid-month "under
+  // budget" just means the month isn't finished yet, not real leftover.
+  // This is additional on top of Individual Investing's own fixed monthly
+  // amount, not a replacement for it — see the category budget above.
+  const isPastMonth = selectedMonth !== currentMonth;
+  const leftoverTotal = isPastMonth
+    ? budgetableCategories.reduce((sum, c) => {
+        if (c.id === 'individual-investing') return sum; // don't suggest investing its own underspend
+        const budget = effectiveBudgets[c.id] || 0;
+        const spent = spentByCategory[c.id] || 0;
+        return sum + Math.max(0, budget - spent);
+      }, 0)
+    : 0;
+  const leftoverDescription = `Leftover from ${monthLabel(selectedMonth)} moved to investing`;
+  const leftoverAlreadyLogged = transactions.some((t) => t.description === leftoverDescription);
+
+  // The computed leftoverTotal is just a starting point, not a forced
+  // amount — the user can log more or less than what was technically under
+  // budget (e.g. round down, or only commit part of it). Resets to the
+  // computed total whenever the viewed month changes.
+  const [leftoverInput, setLeftoverInput] = useState('');
+  const [isEditingLeftover, setIsEditingLeftover] = useState(false);
+  useEffect(() => {
+    setLeftoverInput(leftoverTotal > 0 ? leftoverTotal.toFixed(2) : '');
+    setIsEditingLeftover(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth]);
+  const leftoverAmount = Number(leftoverInput) || 0;
+
+  // Logs the chosen amount as a transaction so the budget reflects it —
+  // doesn't move any real money. The user does that transfer themselves,
+  // then clicks this to record it.
+  async function logLeftoverToInvesting() {
+    await addTransaction({
+      date: todayStr(),
+      description: leftoverDescription,
+      amount: Math.round(leftoverAmount * 100) / 100,
+      categoryId: 'individual-investing',
+      accountId: 'chase-checking',
+    });
+  }
 
   function updateCategory(categoryId, field, value) {
     setBudgetState((prev) => ({
@@ -121,6 +163,51 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
           </button>
         )}
       </div>
+
+      {isPastMonth && leftoverTotal > 0 && (
+        <section className="card leftover-card">
+          <div className="card-header">
+            <h2>Leftover from {monthLabel(selectedMonth)}</h2>
+            <span className="pill pill-good">${leftoverTotal.toFixed(0)} under budget</span>
+          </div>
+          {leftoverAlreadyLogged ? (
+            <p className="module-note">Already logged to Individual Investing.</p>
+          ) : (
+            <>
+              <p className="module-note">
+                You came in ${leftoverTotal.toFixed(2)} under budget this month. This is on top of Individual
+                Investing's regular monthly amount, not instead of it. Once you've actually moved that money
+                yourself, log it here — this doesn't move any real money, it just records it.
+              </p>
+              {isEditingLeftover && (
+                <span className="leftover-amount-input-wrap leftover-amount-inline">
+                  $
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    className="leftover-amount-input"
+                    value={leftoverInput}
+                    onChange={(e) => setLeftoverInput(e.target.value)}
+                    autoFocus
+                  />
+                </span>
+              )}
+              <button type="button" className="primary-btn" onClick={logLeftoverToInvesting} disabled={leftoverAmount <= 0}>
+                Log ${leftoverAmount.toFixed(2)} to Individual Investing
+              </button>
+              <button
+                type="button"
+                className="category-expand-toggle leftover-edit-toggle"
+                onClick={() => setIsEditingLeftover((v) => !v)}
+              >
+                {isEditingLeftover ? 'Done editing' : 'Change amount'}
+              </button>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="card">
         <div className="card-header">

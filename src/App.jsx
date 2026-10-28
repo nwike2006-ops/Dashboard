@@ -52,6 +52,7 @@ function App() {
               transactions={transactions}
               recategorize={recategorize}
               setExcluded={setExcluded}
+              addTransaction={addTransaction}
             />
           )}
           {view === 'accounts' && (

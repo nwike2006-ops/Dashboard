@@ -1,6 +1,11 @@
 import { UserIcon, HelpIcon, SettingsIcon, LogoutIcon } from './icons';
 
-export default function TopBar() {
+// Shown on every page (TopBar renders above the view switcher in App.jsx),
+// not just Overview — so there's always a quick answer to "how much do I
+// have left" without navigating anywhere. Chase Checking specifically
+// (not net worth, which is the Sidebar footer's "Total") — that's the
+// account actually spent from day to day.
+export default function TopBar({ checkingBalance }) {
   return (
     <header className="top-bar">
       <div className="top-bar-brand">
@@ -10,8 +15,11 @@ export default function TopBar() {
             <path d="M21 21l-4.3-4.3" />
           </svg>
         </span>
-        BudgetTemplate
+        <span className="top-bar-brand-text">BudgetTemplate</span>
       </div>
+      {checkingBalance != null && (
+        <span className="top-bar-balance">${checkingBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+      )}
       <div className="top-bar-actions">
         <button className="top-bar-icon-btn" type="button" aria-label="Profile">
           <UserIcon />

@@ -25,10 +25,13 @@ function App() {
   }
 
   const totalBalance = netWorth(budgetState.accounts);
+  // Chase Checking specifically, not net worth — that's the account actually
+  // spent from day to day, unlike savings/investing/credit.
+  const checkingBalance = budgetState.accounts.find((a) => a.id === 'chase-checking')?.balance ?? null;
 
   return (
     <div className="app-shell">
-      <TopBar />
+      <TopBar checkingBalance={checkingBalance} />
       <div className="app-body">
         <Sidebar view={view} setView={setView} totalBalance={totalBalance} />
         <main className="app-main">

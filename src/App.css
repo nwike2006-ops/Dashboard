@@ -37,6 +37,14 @@
   font-size: 17px;
   font-weight: 700;
   color: var(--text-h);
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.top-bar-brand-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .top-bar-mark {
@@ -50,10 +58,22 @@
   color: var(--accent);
 }
 
+.top-bar-balance {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-h);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .top-bar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .top-bar-icon-btn {

@@ -21,10 +21,14 @@ function monthLabel(key) {
 
 export default function Budget({ budgetState, setBudgetState, transactions, recategorize, setExcluded, addTransaction }) {
   const [expandedCategories, setExpandedCategories] = useState(() => new Set());
+  // Which category's monthly-override input is currently open (one at a
+  // time), and its draft value — reset whenever the viewed month changes.
+  const [editingOverrideFor, setEditingOverrideFor] = useState(null);
+  const [overrideInput, setOverrideInput] = useState('');
   const currentMonth = monthKey();
   // Lets the user page back through past months to see that month's actual
-  // spending and what was flagged Needs Review then — budgets themselves
-  // aren't month-specific (same categories/targets every month), only the
+  // spending and what was flagged Needs Review then — a category's normal
+  // budget target is the same every month unless a monthly override is set,
   // spending/review data shown below changes with this.
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
@@ -52,7 +56,12 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   // to the selected month so old flagged items from past months don't pile up here
   // forever — paging back via the month nav below still surfaces them.
   const needsReview = monthTx.filter((t) => t.categoryId === 'needs-review' && Number(t.amount) > 0);
-  const effectiveBudgets = computeCategoryBudgets(budgetableCategories, income);
+  // A category's normal budgetValue is the same every month — but something
+  // like rent can genuinely vary month to month (e.g. utilities bundled in
+  // with a roommate's payment), so a per-month override take precedence over
+  // the usual computed figure when one's been set for the viewed month.
+  const monthOverrides = budgetState.monthlyBudgetOverrides?.[selectedMonth] || {};
+  const effectiveBudgets = { ...computeCategoryBudgets(budgetableCategories, income, spentByCategory), ...monthOverrides };
   const hasRemainderCategory = budgetableCategories.some((c) => c.budgetType === 'remainder');
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
   const totalSpent = Object.values(spentByCategory).reduce((a, b) => a + b, 0);
@@ -83,6 +92,7 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
   useEffect(() => {
     setLeftoverInput(leftoverTotal > 0 ? leftoverTotal.toFixed(2) : '');
     setIsEditingLeftover(false);
+    setEditingOverrideFor(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonth]);
   const leftoverAmount = Number(leftoverInput) || 0;
@@ -105,6 +115,26 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
       ...prev,
       categories: prev.categories.map((c) => (c.id === categoryId ? { ...c, [field]: value } : c)),
     }));
+  }
+
+  function setMonthlyOverride(categoryId, targetMonth, value) {
+    setBudgetState((prev) => {
+      const overrides = { ...(prev.monthlyBudgetOverrides || {}) };
+      overrides[targetMonth] = { ...(overrides[targetMonth] || {}), [categoryId]: value };
+      return { ...prev, monthlyBudgetOverrides: overrides };
+    });
+  }
+
+  function clearMonthlyOverride(categoryId, targetMonth) {
+    setBudgetState((prev) => {
+      const overrides = { ...(prev.monthlyBudgetOverrides || {}) };
+      if (overrides[targetMonth]) {
+        const rest = { ...overrides[targetMonth] };
+        delete rest[categoryId];
+        overrides[targetMonth] = rest;
+      }
+      return { ...prev, monthlyBudgetOverrides: overrides };
+    });
   }
 
   function updateIncome(field, value) {
@@ -323,8 +353,9 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                       <option value="fixed">Fixed $</option>
                       <option value="percent">% of income</option>
                       <option value="remainder">Whatever's left</option>
+                      <option value="actual">Whatever it actually costs</option>
                     </select>
-                    {c.budgetType !== 'remainder' && (
+                    {c.budgetType !== 'remainder' && c.budgetType !== 'actual' && (
                       <span className="category-type-value">
                         {c.budgetType === 'percent' ? null : '$'}
                         <input
@@ -338,6 +369,63 @@ export default function Budget({ budgetState, setBudgetState, transactions, reca
                     )}
                   </div>
                 </div>
+
+                {c.budgetType === 'fixed' &&
+                  (monthOverrides[c.id] != null ? (
+                    <div className="category-override">
+                      <span className="pill pill-good">
+                        {monthLabel(selectedMonth)}: ${Number(monthOverrides[c.id]).toFixed(0)}
+                      </span>
+                      <button
+                        type="button"
+                        className="category-expand-toggle"
+                        onClick={() => clearMonthlyOverride(c.id, selectedMonth)}
+                      >
+                        Reset to default (${Number(c.budgetValue).toFixed(0)})
+                      </button>
+                    </div>
+                  ) : editingOverrideFor === c.id ? (
+                    <div className="category-override">
+                      <span className="leftover-amount-input-wrap leftover-amount-inline">
+                        $
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          className="leftover-amount-input"
+                          value={overrideInput}
+                          onChange={(e) => setOverrideInput(e.target.value)}
+                          autoFocus
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        className="category-expand-toggle"
+                        onClick={() => {
+                          if (overrideInput !== '') setMonthlyOverride(c.id, selectedMonth, Number(overrideInput));
+                          setEditingOverrideFor(null);
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button type="button" className="category-expand-toggle" onClick={() => setEditingOverrideFor(null)}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="category-override">
+                      <button
+                        type="button"
+                        className="category-expand-toggle"
+                        onClick={() => {
+                          setOverrideInput(String(c.budgetValue));
+                          setEditingOverrideFor(c.id);
+                        }}
+                      >
+                        Different amount for {monthLabel(selectedMonth)}?
+                      </button>
+                    </div>
+                  ))}
 
                 <div className="category-row-figures">
                   <span className="category-figure">

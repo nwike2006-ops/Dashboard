@@ -7,6 +7,9 @@ const DEFAULT_STATE = {
   income: DEFAULT_INCOME,
   merchantMemory: {}, // { normalizedDescription: categoryId } — learned from past corrections
   merchantInfo: {}, // { normalizedDescription: "what this company actually is" } — identifies cryptic merchant names
+  monthlyBudgetOverrides: {}, // { monthKey: { categoryId: value } } — a one-off target for a specific month (e.g. rent
+  // varying because utilities are split in with it), overriding that category's normal fixed budgetValue just for
+  // that month — see Budget.jsx
 };
 
 export function useBudgetState() {

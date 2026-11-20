@@ -30,9 +30,10 @@ export default function Overview({ budgetState, transactions, setView }) {
   const monthTx = transactions.filter((t) => monthKey(t.date) === month);
 
   const income = monthlyIncome(budgetState.income);
-  const effectiveBudgets = computeCategoryBudgets(budgetState.categories, income);
+  const spentByCategory = netSpentByCategory(monthTx);
+  const effectiveBudgets = computeCategoryBudgets(budgetState.categories, income, spentByCategory);
   const totalBudgeted = Object.values(effectiveBudgets).reduce((a, b) => a + b, 0);
-  const totalSpent = Object.values(netSpentByCategory(monthTx)).reduce((a, b) => a + b, 0);
+  const totalSpent = Object.values(spentByCategory).reduce((a, b) => a + b, 0);
   const remaining = totalBudgeted - totalSpent;
 
   const totalBalance = netWorth(budgetState.accounts);

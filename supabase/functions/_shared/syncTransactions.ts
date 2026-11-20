@@ -1,5 +1,5 @@
 import { plaidClient } from './plaidClient.ts';
-import { setAccountBalance, setPlaidStatus, setIncomeSuggestion } from './appState.ts';
+import { setAccountBalance, setPlaidStatus, setIncomeSuggestion, checkAndSendBudgetAlerts } from './appState.ts';
 import { targetConfig } from './plaidTargets.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
@@ -311,6 +311,12 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
     }
 
     await setPlaidStatus(supabaseAdmin, itemRowId, { linked: true, lastSyncedAt: new Date().toISOString() });
+
+    try {
+      await checkAndSendBudgetAlerts(supabaseAdmin);
+    } catch (err) {
+      console.error('Failed to check budget alerts:', err?.message ?? err);
+    }
 
     return { synced: added.length + modified.length, removed: removed.length, linked: true };
   } finally {

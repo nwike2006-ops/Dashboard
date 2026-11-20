@@ -36,11 +36,20 @@ export function netWorth(accounts) {
   }, 0);
 }
 
-export function computeCategoryBudgets(categories, income) {
+// 'actual' is a fourth budgetType (alongside fixed/percent/remainder): the
+// category's budget just equals whatever was actually spent this month, so
+// it's structurally never "over" — for something like rent, where the real
+// amount varies slightly (e.g. a roommate's utility split) and there's no
+// fixed target to compare against, only one real number that counts.
+// Requires spentByCategory (this month's actuals) to resolve; remainder
+// categories still treat an 'actual' category's real spend as "allocated"
+// first, so Personal/Misc correctly shrinks or grows around it.
+export function computeCategoryBudgets(categories, income, spentByCategory = {}) {
   const remainderCategories = categories.filter((c) => c.budgetType === 'remainder');
   const allocated = categories
     .filter((c) => c.budgetType !== 'remainder')
     .reduce((sum, c) => {
+      if (c.budgetType === 'actual') return sum + Number(spentByCategory[c.id] || 0);
       const value = Number(c.budgetValue || 0);
       return sum + (c.budgetType === 'percent' ? (value / 100) * income : value);
     }, 0);
@@ -50,6 +59,7 @@ export function computeCategoryBudgets(categories, income) {
   for (const c of categories) {
     if (c.budgetType === 'percent') budgets[c.id] = (Number(c.budgetValue || 0) / 100) * income;
     else if (c.budgetType === 'remainder') budgets[c.id] = remainderShare;
+    else if (c.budgetType === 'actual') budgets[c.id] = Number(spentByCategory[c.id] || 0);
     else budgets[c.id] = Number(c.budgetValue || 0);
   }
   return budgets;

@@ -777,6 +777,14 @@ textarea {
   gap: 6px;
 }
 
+.category-override {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
 .category-type-control select {
   font-size: 12px;
   padding: 5px 8px;

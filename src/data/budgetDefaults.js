@@ -7,13 +7,18 @@ export const DEFAULT_ACCOUNTS = [
   { id: 'credit-card', name: 'Credit Card', type: 'credit', balance: 0 },
 ];
 
-// Each category budgets one of three ways:
-//   'fixed'     — a flat dollar amount every month (e.g. rent)
+// Each category budgets one of four ways:
+//   'fixed'     — a flat dollar amount every month
 //   'percent'   — a % of that month's income (e.g. tithing, savings)
 //   'remainder' — whatever's left of income after every other category is
 //                 accounted for (splits evenly if more than one category uses it)
+//   'actual'    — the budget just equals whatever was actually spent this
+//                 month, so it's structurally never "over" — for something
+//                 like rent, where the real total varies slightly and
+//                 there's no fixed target to compare against, only one real
+//                 number that counts
 export const DEFAULT_CATEGORIES = [
-  { id: 'housing', name: 'Rent / Housing', budgetType: 'fixed', budgetValue: 0 },
+  { id: 'housing', name: 'Rent / Housing', budgetType: 'actual', budgetValue: 0 },
   { id: 'utilities', name: 'Utilities', budgetType: 'fixed', budgetValue: 0 },
   { id: 'groceries', name: 'Groceries', budgetType: 'fixed', budgetValue: 0 },
   { id: 'transportation', name: 'Transportation / Gas', budgetType: 'fixed', budgetValue: 0 },

@@ -198,3 +198,64 @@ export async function checkAndSendBudgetAlerts(supabaseAdmin) {
 
   if (failures.length > 0) console.error('Budget alerts failed to send:', JSON.stringify(failures));
 }
+
+// Mirrors isPayrollDeposit in src/lib/income.js.
+function isPayrollDeposit(description) {
+  return /payroll/i.test(description || '');
+}
+
+// Fires once per MONTH, on that month's first paycheck only (tracked in
+// budget.paycheckReminderSent) — the user invests the full monthly amounts
+// in one lump sum off the first check, not split across every paycheck, so
+// a second/third paycheck later that month should stay silent. Shows the
+// full Roth IRA / Individual Investing monthly targets, not divided. Only
+// ever called with brand-new "added" transactions (never "modified"), so a
+// pending→posted update to the same transaction_id can't trigger this
+// independently of the once-per-month guard. No-ops if NTFY_TOPIC isn't
+// configured.
+export async function checkAndSendPaycheckReminder(supabaseAdmin, newTransactions) {
+  const ntfyTopic = Deno.env.get('NTFY_TOPIC');
+  if (!ntfyTopic) return;
+
+  const payrollTxns = (newTransactions || [])
+    .filter((txn) => Number(txn.amount) < 0 && isPayrollDeposit(txn.merchant_name || txn.name))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  if (payrollTxns.length === 0) return;
+
+  let budget = await loadBudget(supabaseAdmin);
+  const categories = budget.categories || DEFAULT_CATEGORIES;
+  const rothMonthly = Number(categories.find((c) => c.id === 'roth-ira')?.budgetValue || 0);
+  const investMonthly = Number(categories.find((c) => c.id === 'individual-investing')?.budgetValue || 0);
+
+  for (const txn of payrollTxns) {
+    const monthKey = txn.date.slice(0, 7); // 'YYYY-MM'
+    if (budget.paycheckReminderSent?.month === monthKey) continue; // already sent for this month
+
+    const amount = Math.abs(Number(txn.amount));
+    const lines = [];
+    if (rothMonthly > 0) lines.push(`$${rothMonthly.toFixed(0)} → Roth IRA`);
+    if (investMonthly > 0) lines.push(`$${investMonthly.toFixed(0)} → Individual Investing`);
+    const body =
+      lines.length > 0
+        ? `First paycheck of the month: $${amount.toFixed(2)} deposited. Send this month's amounts: ${lines.join(', ')}.`
+        : `First paycheck of the month: $${amount.toFixed(2)} deposited. Time to invest!`;
+
+    try {
+      const res = await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+        method: 'POST',
+        headers: { Title: 'Paycheck deposited — invest it', Priority: 'default' },
+        body,
+      });
+      if (!res.ok) {
+        console.error('ntfy rejected paycheck reminder:', res.status, await res.text().catch(() => ''));
+        continue; // don't mark as sent if it didn't actually go out
+      }
+      budget = { ...budget, paycheckReminderSent: { month: monthKey } };
+      await supabaseAdmin
+        .from('app_state')
+        .upsert({ id: 'main', budget, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    } catch (err) {
+      console.error('Failed to send paycheck reminder:', err?.message ?? err);
+    }
+  }
+}

@@ -1,5 +1,11 @@
 import { plaidClient } from './plaidClient.ts';
-import { setAccountBalance, setPlaidStatus, setIncomeSuggestion, checkAndSendBudgetAlerts } from './appState.ts';
+import {
+  setAccountBalance,
+  setPlaidStatus,
+  setIncomeSuggestion,
+  checkAndSendBudgetAlerts,
+  checkAndSendPaycheckReminder,
+} from './appState.ts';
 import { targetConfig } from './plaidTargets.ts';
 
 // Best-effort mapping from Plaid's own transaction categorization to this
@@ -266,6 +272,14 @@ export async function syncTransactions(supabaseAdmin, itemRowId) {
         { onConflict: 'plaid_transaction_id' }
       );
       if (error) console.error('Failed to upsert transaction:', error);
+    }
+
+    try {
+      // Only `added` (brand-new transactions), never `modified` — a
+      // pending→posted update to the same paycheck shouldn't re-send this.
+      await checkAndSendPaycheckReminder(supabaseAdmin, added);
+    } catch (err) {
+      console.error('Failed to check paycheck reminder:', err?.message ?? err);
     }
 
     for (const txn of removed) {

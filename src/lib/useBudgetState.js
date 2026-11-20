@@ -10,6 +10,9 @@ const DEFAULT_STATE = {
   monthlyBudgetOverrides: {}, // { monthKey: { categoryId: value } } — a one-off target for a specific month (e.g. rent
   // varying because utilities are split in with it), overriding that category's normal fixed budgetValue just for
   // that month — see Budget.jsx
+  goals: [], // [{ id, name, targetAmount, currentAmount, targetDate }] — savings goals, separate from monthly budget
+  // categories (e.g. "Emergency fund: $2,340 of $5,000"), tracked manually since the amount saved toward a goal
+  // isn't necessarily all sitting in one dedicated account — see Overview.jsx
 };
 
 export function useBudgetState() {

@@ -5,6 +5,7 @@ import Sidebar, { MobileTabBar } from './components/Sidebar';
 import Overview from './pages/Overview';
 import Transactions from './pages/Transactions';
 import Budget from './pages/Budget';
+import Goals from './pages/Goals';
 import Accounts from './pages/Accounts';
 import { useBudgetState } from './lib/useBudgetState';
 import { useBudgetTransactions } from './lib/useBudgetTransactions';
@@ -35,9 +36,7 @@ function App() {
       <div className="app-body">
         <Sidebar view={view} setView={setView} totalBalance={totalBalance} />
         <main className="app-main">
-          {view === 'overview' && (
-            <Overview budgetState={budgetState} transactions={transactions} setView={setView} />
-          )}
+          {view === 'overview' && <Overview budgetState={budgetState} transactions={transactions} setView={setView} />}
           {view === 'transactions' && (
             <Transactions
               budgetState={budgetState}
@@ -57,6 +56,9 @@ function App() {
               setExcluded={setExcluded}
               addTransaction={addTransaction}
             />
+          )}
+          {view === 'goals' && (
+            <Goals budgetState={budgetState} setBudgetState={setBudgetState} transactions={transactions} />
           )}
           {view === 'accounts' && (
             <Accounts

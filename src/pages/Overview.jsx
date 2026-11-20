@@ -4,25 +4,7 @@ import { todayStr, todayLabel, monthProgress } from '../lib/storage';
 import { isPayrollDeposit } from '../lib/income';
 import { netSpentByCategory } from '../lib/spending';
 import { monthlyIncome, computeCategoryBudgets, netWorth } from '../lib/budgetMath';
-
-function monthKey(dateStr) {
-  return dateStr.slice(0, 7);
-}
-
-function monthLabel(key) {
-  const [y, m] = key.split('-');
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(undefined, { month: 'short' });
-}
-
-function lastNMonths(n) {
-  const out = [];
-  const today = new Date();
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return out;
-}
+import { monthKey, monthLabel, lastNMonths } from '../lib/dateBuckets';
 
 export default function Overview({ budgetState, transactions, setView }) {
   const today = todayStr();
@@ -45,8 +27,10 @@ export default function Overview({ budgetState, transactions, setView }) {
     // Only real paychecks count as income here — Zelle/Venmo/wire transfers
     // the user moves around for investing show up as credits too, but
     // they're not income.
-    const income = tx.filter((t) => t.amount < 0 && isPayrollDeposit(t.description)).reduce((s, t) => s + Math.abs(t.amount), 0);
-    return { label: monthLabel(key), a: income, b: expense };
+    const incomeThatMonth = tx
+      .filter((t) => t.amount < 0 && isPayrollDeposit(t.description))
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+    return { label: monthLabel(key), a: incomeThatMonth, b: expense };
   });
 
   const recent = transactions.slice(0, 5);

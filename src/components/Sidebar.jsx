@@ -1,9 +1,10 @@
-import { OverviewIcon, TransactionsIcon, BudgetIcon, AccountsIcon } from './icons';
+import { OverviewIcon, TransactionsIcon, BudgetIcon, AccountsIcon, GoalsIcon } from './icons';
 
 const NAV_ITEMS = [
   { key: 'overview', label: 'Overview', Icon: OverviewIcon },
   { key: 'transactions', label: 'Transactions', Icon: TransactionsIcon },
   { key: 'budget', label: 'Budget', Icon: BudgetIcon },
+  { key: 'goals', label: 'Goals', Icon: GoalsIcon },
   { key: 'accounts', label: 'Accounts', Icon: AccountsIcon },
 ];
 
